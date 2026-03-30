@@ -1,0 +1,135 @@
+# Jules Reader - AI-Powered Article Reader App
+
+## Overview
+An AI-powered reading/listening mobile app that fetches web articles and reads them aloud using text-to-speech. Alternative to ElevenReader with built-in AI summarization via Google Jules.
+
+## Tech Stack
+- **Framework**: Capacitor (web app → native mobile)
+- **Frontend**: React + TypeScript + Vite
+- **UI Framework**: TailwindCSS + shadcn/ui components
+- **TTS**: Web Speech API (native browser TTS)
+- **Article Parsing**: Jina AI Reader API (https://r.jina.ai/http://...)
+- **AI Summarization**: Google Jules API
+- **Offline Storage**: IndexedDB via PouchDB
+- **Mobile Build**: Capacitor Android
+- **Deployment**: GitHub Pages (web preview) + APK (Android)
+
+## Key Features
+
+### 1. URL Input & Article Fetching
+- Clean URL input field with paste button
+- Fetch article content using Jina AI Reader API
+- Show loading state during fetch
+- Error handling for invalid URLs or failed fetches
+- Article metadata extraction (title, author, date, reading time)
+
+### 2. Clean Reading View
+- Mobile-first, distraction-free reading interface
+- Font size controls (small, medium, large)
+- Progress indicator (scroll position)
+- Article navigation (table of contents if available)
+- Dark/light mode toggle
+
+### 3. TTS Playback
+- Play/pause/stop controls
+- Voice selection (available system voices)
+- Speed control (0.5x - 2x)
+- Highlight current sentence being read
+- Background playback support (Android)
+- Playback position persistence
+
+### 4. Save Articles Offline
+- Save articles to local storage
+- Organize saved articles (recent, favorites, folders)
+- Delete articles
+- Offline reading capability
+- Export articles (text, markdown)
+
+### 5. AI Summarization
+- Generate article summaries using Google Jules API
+- Key points extraction
+- Bullet point format
+- Summary length options (short, medium, long)
+- Show summary alongside article or in separate tab
+
+### 6. UI/UX
+- Modern, mobile-first design
+- Smooth animations and transitions
+- Bottom navigation bar
+- Home / Saved / Settings tabs
+- Responsive layout (works on web and mobile)
+- Material Design-inspired aesthetics
+
+## API Usage
+
+### Article Fetching (Jina AI)
+```
+GET https://r.jina.ai/http://example.com/article
+```
+
+### Jules API Pattern
+```javascript
+const response = await fetch('https://api.jules.ai/v1/summarize', {
+  method: 'POST',
+  headers: {
+    'Authorization': `Bearer ${JULES_API_KEY}`,
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+    text: articleContent,
+    format: 'bullet-points',
+    length: 'medium'
+  })
+});
+```
+
+## Project Structure
+```
+jules-reader/
+├── src/
+│   ├── components/
+│   │   ├── ArticleView.tsx
+│   │   ├── TTSPlayer.tsx
+│   │   ├── URLInput.tsx
+│   │   ├── SummaryView.tsx
+│   │   └── SavedArticles.tsx
+│   ├── hooks/
+│   │   ├── useTTS.ts
+│   │   ├── useArticleStorage.ts
+│   │   └── useJulesAPI.ts
+│   ├── lib/
+│   │   ├── jina.ts
+│   │   ├── jules.ts
+│   │   ├── storage.ts
+│   │   └── types.ts
+│   ├── App.tsx
+│   └── main.tsx
+├── capacitor.config.ts
+├── package.json
+├── tailwind.config.js
+├── tsconfig.json
+└── vite.config.ts
+```
+
+## Requirements
+- Real TTS functionality using Web Speech API
+- Real article fetching and parsing
+- Working offline article storage
+- Actual AI summarization via Jules API
+- Mobile-responsive design that works on Android
+- Dark mode support
+- APK build via Capacitor
+
+## Deployment
+1. **GitHub Pages**: Web preview at `https://hendr15k.github.io/jules-reader/`
+2. **Android APK**: Build via `npm run build:android`
+3. **Source Code**: Public repo at `https://github.com/hendr15k/jules-reader`
+
+## Success Criteria
+- ✅ App successfully fetches and displays articles
+- ✅ TTS plays article content with voice/speed controls
+- ✅ Articles can be saved and read offline
+- ✅ AI summaries are generated and displayed
+- ✅ Dark/light mode works
+- ✅ APK builds and installs on Android
+- ✅ GitHub Pages preview works
