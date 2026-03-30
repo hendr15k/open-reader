@@ -4,21 +4,19 @@ import { TTSState } from '../lib/types';
 export function useTTS() {
   const [state, setState] = useState<TTSState>({
     isPlaying: false,
+    isPaused: false,
     currentSentence: 0,
     speed: 1,
     selectedVoice: null,
   });
   const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
   const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
-  const sentencesRef = useRef<string[]>([]);
+  const pausedTextRef = useRef<string>('');
 
   useEffect(() => {
-    // Load available voices
     const loadVoices = () => {
       const availableVoices = speechSynthesis.getVoices();
       setVoices(availableVoices);
-
-      // Select English voice by default
       const englishVoice = availableVoices.find(v => v.lang.startsWith('en'));
       if (englishVoice && !state.selectedVoice) {
         setState(prev => ({ ...prev, selectedVoice: englishVoice.name }));
@@ -35,36 +33,28 @@ export function useTTS() {
 
   const speak = useCallback((text: string) => {
     speechSynthesis.cancel();
-
-    // Split text into sentences
-    const sentences = text.match(/[^.!?]+[.!?]+/g) || [text];
-    sentencesRef.current = sentences;
-
-    if (sentences.length === 0) return;
+    pausedTextRef.current = text;
 
     const utterance = new SpeechSynthesisUtterance(text);
 
     if (state.selectedVoice) {
       const voice = voices.find(v => v.name === state.selectedVoice);
-      if (voice) {
-        utterance.voice = voice;
-      }
+      if (voice) utterance.voice = voice;
     }
 
     utterance.rate = state.speed;
     utterance.pitch = 1;
 
     utterance.onstart = () => {
-      setState(prev => ({ ...prev, isPlaying: true }));
+      setState(prev => ({ ...prev, isPlaying: true, isPaused: false }));
     };
 
     utterance.onend = () => {
-      setState(prev => ({ ...prev, isPlaying: false, currentSentence: 0 }));
+      setState(prev => ({ ...prev, isPlaying: false, isPaused: false, currentSentence: 0 }));
     };
 
-    utterance.onerror = (e) => {
-      console.error('TTS error:', e);
-      setState(prev => ({ ...prev, isPlaying: false }));
+    utterance.onerror = () => {
+      setState(prev => ({ ...prev, isPlaying: false, isPaused: false }));
     };
 
     utteranceRef.current = utterance;
@@ -72,18 +62,23 @@ export function useTTS() {
   }, [voices, state.speed, state.selectedVoice]);
 
   const pause = useCallback(() => {
-    speechSynthesis.pause();
-    setState(prev => ({ ...prev, isPlaying: false }));
+    if (speechSynthesis.speaking) {
+      speechSynthesis.pause();
+      setState(prev => ({ ...prev, isPlaying: false, isPaused: true }));
+    }
   }, []);
 
   const resume = useCallback(() => {
-    speechSynthesis.resume();
-    setState(prev => ({ ...prev, isPlaying: true }));
+    if (speechSynthesis.paused) {
+      speechSynthesis.resume();
+      setState(prev => ({ ...prev, isPlaying: true, isPaused: false }));
+    }
   }, []);
 
   const stop = useCallback(() => {
     speechSynthesis.cancel();
-    setState(prev => ({ ...prev, isPlaying: false, currentSentence: 0 }));
+    pausedTextRef.current = '';
+    setState(prev => ({ ...prev, isPlaying: false, isPaused: false, currentSentence: 0 }));
   }, []);
 
   const setSpeed = useCallback((speed: number) => {

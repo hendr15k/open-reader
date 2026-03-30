@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Play, Pause, Square, Save, ChevronLeft } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { Play, Pause, Square, Save, ChevronLeft, Minus, Plus } from 'lucide-react';
 import { Article } from '../lib/types';
 import { useTTS } from '../hooks/useTTS';
 
@@ -10,19 +10,38 @@ interface ArticleViewProps {
   isSaved: boolean;
 }
 
-export default function ArticleView({
-  article,
-  onClose,
-  onSave,
-  isSaved,
-}: ArticleViewProps) {
+const FONT_SIZES = [
+  { name: 'Small', class: 'text-sm' },
+  { name: 'Medium', class: 'text-base' },
+  { name: 'Large', class: 'text-lg' },
+  { name: 'X-Large', class: 'text-xl' },
+];
+
+export default function ArticleView({ article, onClose, onSave, isSaved }: ArticleViewProps) {
   const { state, voices, speak, pause, resume, stop, setSpeed, setVoice } = useTTS();
-  const [fontSize, setFontSize] = useState<'small' | 'medium' | 'large'>('medium');
+  const [fontSizeIndex, setFontSizeIndex] = useState(1);
+  const contentRef = useRef<HTMLDivElement>(null);
+  const [readingProgress, setReadingProgress] = useState(0);
+
+  // Track reading progress
+  useEffect(() => {
+    const el = contentRef.current;
+    if (!el) return;
+
+    const handleScroll = () => {
+      const { scrollTop, scrollHeight, clientHeight } = el;
+      const progress = scrollHeight > clientHeight ? (scrollTop / (scrollHeight - clientHeight)) * 100 : 100;
+      setReadingProgress(Math.min(100, Math.max(0, progress)));
+    };
+
+    el.addEventListener('scroll', handleScroll);
+    return () => el.removeEventListener('scroll', handleScroll);
+  }, []);
 
   const handlePlay = () => {
     if (state.isPlaying) {
       pause();
-    } else if (speechSynthesis.paused) {
+    } else if (state.isPaused) {
       resume();
     } else {
       speak(article.content);
@@ -31,33 +50,48 @@ export default function ArticleView({
 
   const handleStop = () => {
     stop();
+    setReadingProgress(0);
   };
 
-  const fontSizeClasses = {
-    small: 'text-sm',
-    medium: 'text-base',
-    large: 'text-lg',
+  const decreaseFontSize = () => {
+    setFontSizeIndex(prev => Math.max(0, prev - 1));
   };
+
+  const increaseFontSize = () => {
+    setFontSizeIndex(prev => Math.min(FONT_SIZES.length - 1, prev + 1));
+  };
+
+  const currentFontClass = FONT_SIZES[fontSizeIndex].class;
 
   return (
-    <div className="fixed inset-0 bg-white dark:bg-gray-900 z-50 flex flex-col">
+    <div className="fixed inset-0 bg-white dark:bg-gray-950 z-50 flex flex-col">
+      {/* Progress Bar */}
+      <div
+        className="h-1 bg-indigo-600 transition-all duration-150"
+        style={{ width: `${readingProgress}%` }}
+      />
+
       {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900">
         <button
           onClick={onClose}
-          className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full"
+          className="w-10 h-10 rounded-xl flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-800"
         >
           <ChevronLeft className="w-6 h-6 text-gray-700 dark:text-gray-300" />
         </button>
-        <h2 className="text-lg font-semibold text-gray-900 dark:text-white flex-1 mx-4 truncate">
-          {article.title}
-        </h2>
+
+        <div className="flex items-center gap-1">
+          <span className="text-xs text-gray-500 dark:text-gray-400 tabular-nums">
+            {Math.round(readingProgress)}%
+          </span>
+        </div>
+
         <button
           onClick={onSave}
-          className={`p-2 rounded-full ${
+          className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors ${
             isSaved
-              ? 'bg-primary-100 dark:bg-primary-900 text-primary-600 dark:text-primary-400'
-              : 'hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300'
+              ? 'bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400'
+              : 'hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 dark:text-gray-400'
           }`}
         >
           <Save className="w-5 h-5" />
@@ -65,104 +99,126 @@ export default function ArticleView({
       </div>
 
       {/* Article Content */}
-      <div className="flex-1 overflow-y-auto">
-        <div className="max-w-3xl mx-auto p-4 sm:p-6">
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mb-4">
-            {article.title}
-          </h1>
+      <div ref={contentRef} className="flex-1 overflow-y-auto">
+        <article className="max-w-2xl mx-auto px-5 py-8">
+          {/* Article Meta */}
+          <header className="mb-8">
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white leading-tight mb-4">
+              {article.title}
+            </h1>
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-gray-500 dark:text-gray-400">
+              {article.author && (
+                <span className="font-medium text-gray-700 dark:text-gray-300">{article.author}</span>
+              )}
+              {article.date && (
+                <>
+                  <span>•</span>
+                  <span>{article.date}</span>
+                </>
+              )}
+              {article.readingTime && (
+                <>
+                  <span>•</span>
+                  <span>{article.readingTime} min read</span>
+                </>
+              )}
+            </div>
+          </header>
 
-          <div className="flex items-center gap-4 text-sm text-gray-600 dark:text-gray-400 mb-6">
-            {article.readingTime && (
-              <span>📖 {article.readingTime} min read</span>
-            )}
-            {article.date && <span>📅 {article.date}</span>}
+          {/* Content */}
+          <div className={`prose dark:prose-invert max-w-none ${currentFontClass}`}>
+            {article.content.split('\n').map((paragraph, idx) => {
+              const trimmed = paragraph.trim();
+              if (!trimmed) return <div key={idx} className="h-4" />;
+              return (
+                <p key={idx} className="text-gray-700 dark:text-gray-300 leading-relaxed mb-5">
+                  {trimmed}
+                </p>
+              );
+            })}
           </div>
-
-          <div
-            className={`prose prose-lg dark:prose-invert max-w-none ${fontSizeClasses[fontSize]}`}
-          >
-            {article.content.split('\n').map((paragraph, idx) => (
-              <p key={idx} className="mb-4 leading-relaxed">
-                {paragraph}
-              </p>
-            ))}
-          </div>
-        </div>
+        </article>
       </div>
 
       {/* TTS Controls */}
-      <div className="border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 p-4">
-        <div className="max-w-3xl mx-auto">
-          {/* Primary Controls */}
-          <div className="flex items-center justify-center gap-4 mb-4">
-            <button
-              onClick={handlePlay}
-              className="p-4 bg-primary-600 text-white rounded-full hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500"
+      <div className="border-t border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900">
+        {/* Main Controls */}
+        <div className="flex items-center justify-center gap-4 py-4 px-4">
+          <button
+            onClick={decreaseFontSize}
+            className="w-10 h-10 rounded-xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"
+            aria-label="Decrease font size"
+          >
+            <Minus className="w-4 h-4" />
+          </button>
+
+          <button
+            onClick={handleStop}
+            className="w-12 h-12 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"
+            aria-label="Stop"
+          >
+            <Square className="w-5 h-5" />
+          </button>
+
+          <button
+            onClick={handlePlay}
+            className={`w-16 h-16 rounded-full flex items-center justify-center text-white shadow-lg transition-transform active:scale-95 ${
+              state.isPlaying
+                ? 'bg-indigo-600 hover:bg-indigo-700'
+                : 'bg-indigo-600 hover:bg-indigo-700'
+            }`}
+            aria-label={state.isPlaying ? 'Pause' : 'Play'}
+          >
+            {state.isPlaying ? (
+              <Pause className="w-7 h-7" />
+            ) : (
+              <Play className="w-7 h-7 ml-1" />
+            )}
+          </button>
+
+          <button
+            onClick={increaseFontSize}
+            className="w-10 h-10 rounded-xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"
+            aria-label="Increase font size"
+          >
+            <Plus className="w-4 h-4" />
+          </button>
+        </div>
+
+        {/* Secondary Controls */}
+        <div className="flex items-center justify-center gap-4 pb-5 px-4">
+          {/* Speed */}
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-gray-500 dark:text-gray-400 w-10">Speed</span>
+            <select
+              value={state.speed}
+              onChange={(e) => setSpeed(parseFloat(e.target.value))}
+              className="px-2 py-1.5 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 text-xs border-0 focus:ring-2 focus:ring-indigo-500"
             >
-              {state.isPlaying ? (
-                <Pause className="w-8 h-8" />
-              ) : (
-                <Play className="w-8 h-8 ml-1" />
-              )}
-            </button>
-            <button
-              onClick={handleStop}
-              className="p-3 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-full hover:bg-gray-300 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-500"
-            >
-              <Square className="w-6 h-6" />
-            </button>
+              <option value={0.5}>0.5x</option>
+              <option value={0.75}>0.75x</option>
+              <option value={1}>1x</option>
+              <option value={1.25}>1.25x</option>
+              <option value={1.5}>1.5x</option>
+              <option value={2}>2x</option>
+            </select>
           </div>
 
-          {/* Secondary Controls */}
-          <div className="flex flex-wrap items-center justify-center gap-4">
-            {/* Speed Control */}
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-gray-600 dark:text-gray-400">Speed:</span>
-              <select
-                value={state.speed}
-                onChange={(e) => setSpeed(parseFloat(e.target.value))}
-                className="px-3 py-1.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
-              >
-                <option value={0.5}>0.5x</option>
-                <option value={0.75}>0.75x</option>
-                <option value={1}>1x</option>
-                <option value={1.25}>1.25x</option>
-                <option value={1.5}>1.5x</option>
-                <option value={2}>2x</option>
-              </select>
-            </div>
-
-            {/* Voice Selection */}
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-gray-600 dark:text-gray-400">Voice:</span>
-              <select
-                value={state.selectedVoice || ''}
-                onChange={(e) => setVoice(e.target.value)}
-                className="px-3 py-1.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
-              >
-                <option value="">Default</option>
-                {voices.map((voice) => (
-                  <option key={voice.name} value={voice.name}>
-                    {voice.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Font Size */}
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-gray-600 dark:text-gray-400">Font:</span>
-              <select
-                value={fontSize}
-                onChange={(e) => setFontSize(e.target.value as 'small' | 'medium' | 'large')}
-                className="px-3 py-1.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
-              >
-                <option value="small">Small</option>
-                <option value="medium">Medium</option>
-                <option value="large">Large</option>
-              </select>
-            </div>
-
+          {/* Voice */}
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-gray-500 dark:text-gray-400 w-10">Voice</span>
+            <select
+              value={state.selectedVoice || ''}
+              onChange={(e) => setVoice(e.target.value)}
+              className="px-2 py-1.5 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 text-xs border-0 focus:ring-2 focus:ring-indigo-500 max-w-32 truncate"
+            >
+              <option value="">System Default</option>
+              {voices.slice(0, 5).map((voice) => (
+                <option key={voice.name} value={voice.name}>
+                  {voice.name.split(' ')[0]}
+                </option>
+              ))}
+            </select>
           </div>
         </div>
       </div>

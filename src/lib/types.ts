@@ -3,7 +3,6 @@ export interface Article {
   url: string;
   title: string;
   content: string;
-  summary?: string;
   author?: string;
   date?: string;
   readingTime?: number;
@@ -12,6 +11,7 @@ export interface Article {
 
 export interface TTSState {
   isPlaying: boolean;
+  isPaused: boolean;
   currentSentence: number;
   speed: number;
   selectedVoice: string | null;
