@@ -1,7 +1,7 @@
 {
-  "name": "jules-reader",
+  "name": "open-reader",
   "version": "1.0.0",
-  "description": "AI-powered article reader app with TTS and AI summarization",
+  "description": "Distraction-free article reader app with TTS and offline storage",
   "type": "module",
   "scripts": {
     "dev": "vite",

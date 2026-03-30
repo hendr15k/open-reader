@@ -11,8 +11,8 @@ import SavedArticles from './components/SavedArticles';
 const DEMO_ARTICLE: Article = {
   id: 'demo',
   url: 'https://example.com/demo',
-  title: 'Welcome to Jules Reader',
-  content: `Jules Reader transforms any web article into a peaceful reading experience.
+  title: 'Welcome to Open Reader',
+  content: `Open Reader transforms any web article into a peaceful reading experience.
 
 Paste any URL above to begin. The article will be extracted and formatted for comfortable reading, without ads, distractions, or cluttered layouts.
 
@@ -26,10 +26,10 @@ Save articles to your library and read them later, even without an internet conn
 Switch to dark mode for comfortable reading at night. The app automatically follows your system preference, or toggle it manually in settings.
 
 📱 Works Everywhere
-Whether you're on a phone, tablet, or computer, Jules Reader provides a clean, responsive reading experience that adapts to your screen.
+Whether you're on a phone, tablet, or computer, the app provides a clean, responsive reading experience that adapts to your screen.
 
 Try it now — paste a URL in the box above and start reading.`,
-  author: 'Jules Reader Team',
+  author: 'Open Reader Team',
   date: new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' }),
   readingTime: 2,
   savedAt: Date.now(),
@@ -201,7 +201,7 @@ export default function App() {
             </div>
             <div className="p-5 space-y-4">
               <div>
-                <p className="text-2xl font-bold text-gray-900 dark:text-white">Jules Reader</p>
+                <p className="text-2xl font-bold text-gray-900 dark:text-white">Open Reader</p>
                 <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Version 1.2.0</p>
               </div>
               <p className="text-gray-600 dark:text-gray-300 text-sm leading-relaxed">
@@ -210,7 +210,7 @@ export default function App() {
               </p>
               <div className="pt-2">
                 <p className="text-xs text-gray-400 dark:text-gray-500">
-                  Built by Jules AI • Powered by Jina Reader
+                  Powered by Jina Reader
                 </p>
               </div>
             </div>
@@ -232,7 +232,7 @@ export default function App() {
                 <BookOpen className="w-5 h-5 text-white" />
               </div>
               <div>
-                <h1 className="text-xl font-bold text-gray-900 dark:text-white">Jules Reader</h1>
+                <h1 className="text-xl font-bold text-gray-900 dark:text-white">Open Reader</h1>
                 <p className="text-xs text-gray-500 dark:text-gray-400">Distraction-free reading</p>
               </div>
             </div>
@@ -291,7 +291,7 @@ export default function App() {
                 <span className="inline-block px-2 py-0.5 bg-white/20 rounded-full text-xs font-medium text-white/90 mb-2">
                   Try it free
                 </span>
-                <h3 className="text-lg font-bold text-white mb-1">Welcome to Jules Reader</h3>
+                <h3 className="text-lg font-bold text-white mb-1">Welcome to Open Reader</h3>
                 <p className="text-sm text-white/80 leading-relaxed">
                   No URL? No problem. Tap here to see how it works.
                 </p>
