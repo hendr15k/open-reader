@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { BookOpen, Bookmark, Settings, Moon, Sun } from 'lucide-react';
 import { Article, Tab } from './lib/types';
 import { fetchArticle } from './lib/jina';
-import { generateSummary } from './lib/jules';
 import { useArticleStorage } from './hooks/useArticleStorage';
 import URLInput from './components/URLInput';
 import ArticleView from './components/ArticleView';
@@ -90,16 +89,7 @@ function App() {
     }
   };
 
-  const handleGenerateSummary = async () => {
-    if (!currentArticle) return;
 
-    try {
-      const summary = await generateSummary(currentArticle.content);
-      setCurrentArticle({ ...currentArticle, summary });
-    } catch (err) {
-      console.error('Error generating summary:', err);
-    }
-  };
 
   const renderContent = () => {
     if (currentArticle) {
@@ -112,7 +102,7 @@ function App() {
           }}
           onSave={handleSaveArticle}
           isSaved={isSaved}
-          onGenerateSummary={handleGenerateSummary}
+
         />
       );
     }
@@ -160,7 +150,6 @@ function App() {
                   <li>📖 Fetch and read articles from any URL</li>
                   <li>🎧 Text-to-speech playback with speed control</li>
                   <li>💾 Save articles for offline reading</li>
-                  <li>✨ AI-powered article summarization</li>
                   <li>🌙 Dark mode support</li>
                 </ul>
               </div>
@@ -253,7 +242,7 @@ function App() {
                 <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">About</p>
                 <div className="text-sm text-gray-700 dark:text-gray-300">
                   <p><strong>Jules Reader</strong> v1.0.0</p>
-                  <p className="mt-1">AI-powered article reader with TTS and summarization</p>
+                  <p className="mt-1">Article reader with TTS support</p>
                 </div>
               </div>
             </div>

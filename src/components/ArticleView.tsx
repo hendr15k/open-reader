@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Play, Pause, Square, Save, Sparkles, ChevronLeft } from 'lucide-react';
+import { Play, Pause, Square, Save, ChevronLeft } from 'lucide-react';
 import { Article } from '../lib/types';
 import { useTTS } from '../hooks/useTTS';
 
@@ -8,7 +8,6 @@ interface ArticleViewProps {
   onClose: () => void;
   onSave: () => void;
   isSaved: boolean;
-  onGenerateSummary: () => void;
 }
 
 export default function ArticleView({
@@ -16,7 +15,6 @@ export default function ArticleView({
   onClose,
   onSave,
   isSaved,
-  onGenerateSummary,
 }: ArticleViewProps) {
   const { state, voices, speak, pause, resume, stop, setSpeed, setVoice } = useTTS();
   const [fontSize, setFontSize] = useState<'small' | 'medium' | 'large'>('medium');
@@ -89,21 +87,6 @@ export default function ArticleView({
               </p>
             ))}
           </div>
-
-          {/* Summary Section */}
-          {article.summary && (
-            <div className="mt-8 p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
-              <div className="flex items-center gap-2 mb-3">
-                <Sparkles className="w-5 h-5 text-yellow-600 dark:text-yellow-400" />
-                <h3 className="text-lg font-semibold text-yellow-900 dark:text-yellow-100">
-                  AI Summary
-                </h3>
-              </div>
-              <div className="text-gray-800 dark:text-gray-200 whitespace-pre-line">
-                {article.summary}
-              </div>
-            </div>
-          )}
         </div>
       </div>
 
@@ -180,16 +163,6 @@ export default function ArticleView({
               </select>
             </div>
 
-            {/* Generate Summary */}
-            {!article.summary && (
-              <button
-                onClick={onGenerateSummary}
-                className="flex items-center gap-2 px-4 py-1.5 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 focus:outline-none focus:ring-2 focus:ring-yellow-500 text-sm"
-              >
-                <Sparkles className="w-4 h-4" />
-                Generate Summary
-              </button>
-            )}
           </div>
         </div>
       </div>
