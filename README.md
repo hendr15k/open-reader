@@ -2,7 +2,7 @@
 
 Distraction-free article reader app with text-to-speech and offline storage. An ElevenReader-style alternative built with Capacitor, React, and TypeScript.
 
-Repo and folder name remain `jules-reader` for now.
+Repo and folder name are now `open-reader`.
 
 ## Features
 
@@ -32,8 +32,8 @@ Repo and folder name remain `jules-reader` for now.
 ### Installation
 
 ```bash
-git clone https://github.com/hendr15k/jules-reader.git
-cd jules-reader
+git clone https://github.com/hendr15k/open-reader.git
+cd open-reader
 npm install
 ```
 
@@ -66,7 +66,7 @@ npm run android:build
 ## Project Structure
 
 ```text
-jules-reader/
+open-reader/
 ├── src/
 │   ├── components/
 │   ├── hooks/

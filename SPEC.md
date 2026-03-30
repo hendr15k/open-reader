@@ -85,7 +85,7 @@ const response = await fetch('https://api.jules.ai/v1/summarize', {
 
 ## Project Structure
 ```
-jules-reader/
+open-reader/
 ├── src/
 │   ├── components/
 │   │   ├── ArticleView.tsx
@@ -121,9 +121,9 @@ jules-reader/
 - APK build via Capacitor
 
 ## Deployment
-1. **GitHub Pages**: Web preview at `https://hendr15k.github.io/jules-reader/`
+1. **GitHub Pages**: Web preview at `https://hendr15k.github.io/open-reader/`
 2. **Android APK**: Build via `npm run build:android`
-3. **Source Code**: Public repo at `https://github.com/hendr15k/jules-reader`
+3. **Source Code**: Public repo at `https://github.com/hendr15k/open-reader`
 
 ## Success Criteria
 - ✅ App successfully fetches and displays articles
