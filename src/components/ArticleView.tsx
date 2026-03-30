@@ -66,41 +66,43 @@ export default function ArticleView({ article, onClose, onSave, isSaved }: Artic
   return (
     <div className="fixed inset-0 bg-white dark:bg-gray-950 z-50 flex flex-col">
       {/* Progress Bar */}
-      <div
-        className="h-1 bg-indigo-600 transition-all duration-150"
-        style={{ width: `${readingProgress}%` }}
-      />
+      <div className="fixed top-0 left-0 right-0 z-50 h-1 bg-gray-200 dark:bg-gray-800">
+        <div
+          className="h-full bg-indigo-600 transition-all duration-150"
+          style={{ width: `${readingProgress}%` }}
+        />
+      </div>
 
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900">
+      <div className="sticky top-0 z-40 flex items-center justify-between px-4 py-3 border-b border-gray-200/50 dark:border-gray-800/50 bg-white/80 dark:bg-gray-900/80 backdrop-blur-md">
         <button
           onClick={onClose}
-          className="w-10 h-10 rounded-xl flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-800"
+          className="w-10 h-10 rounded-xl flex items-center justify-center hover:bg-gray-100/50 dark:hover:bg-gray-800/50 transition-colors"
         >
           <ChevronLeft className="w-6 h-6 text-gray-700 dark:text-gray-300" />
         </button>
 
         <div className="flex items-center gap-1">
-          <span className="text-xs text-gray-500 dark:text-gray-400 tabular-nums">
-            {Math.round(readingProgress)}%
+          <span className="text-xs font-medium text-gray-500 dark:text-gray-400 tabular-nums">
+            {Math.round(readingProgress)}% read
           </span>
         </div>
 
         <button
           onClick={onSave}
-          className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors ${
+          className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-300 ease-in-out ${
             isSaved
-              ? 'bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400'
-              : 'hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 dark:text-gray-400'
+              ? 'bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400 shadow-sm'
+              : 'hover:bg-gray-100/50 dark:hover:bg-gray-800/50 text-gray-500 dark:text-gray-400'
           }`}
         >
-          <Save className="w-5 h-5" />
+          <Save className={`w-5 h-5 ${isSaved ? 'fill-current' : ''}`} />
         </button>
       </div>
 
       {/* Article Content */}
-      <div ref={contentRef} className="flex-1 overflow-y-auto">
-        <article className="max-w-2xl mx-auto px-5 py-8">
+      <div ref={contentRef} className="flex-1 overflow-y-auto pb-48">
+        <article className="max-w-2xl mx-auto px-5 py-8 animate-fade-in">
           {/* Article Meta */}
           <header className="mb-8">
             <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white leading-tight mb-4">
@@ -126,12 +128,12 @@ export default function ArticleView({ article, onClose, onSave, isSaved }: Artic
           </header>
 
           {/* Content */}
-          <div className={`prose dark:prose-invert max-w-none ${currentFontClass}`}>
+          <div className={`prose prose-indigo dark:prose-invert max-w-none prose-p:leading-relaxed prose-a:text-indigo-600 dark:prose-a:text-indigo-400 ${currentFontClass}`}>
             {article.content.split('\n').map((paragraph, idx) => {
               const trimmed = paragraph.trim();
               if (!trimmed) return <div key={idx} className="h-4" />;
               return (
-                <p key={idx} className="text-gray-700 dark:text-gray-300 leading-relaxed mb-5">
+                <p key={idx} className="text-gray-800 dark:text-gray-200 leading-relaxed mb-6">
                   {trimmed}
                 </p>
               );
@@ -140,85 +142,86 @@ export default function ArticleView({ article, onClose, onSave, isSaved }: Artic
         </article>
       </div>
 
-      {/* TTS Controls */}
-      <div className="border-t border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900">
-        {/* Main Controls */}
-        <div className="flex items-center justify-center gap-4 py-4 px-4">
-          <button
-            onClick={decreaseFontSize}
-            className="w-10 h-10 rounded-xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"
-            aria-label="Decrease font size"
-          >
-            <Minus className="w-4 h-4" />
-          </button>
-
-          <button
-            onClick={handleStop}
-            className="w-12 h-12 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"
-            aria-label="Stop"
-          >
-            <Square className="w-5 h-5" />
-          </button>
-
-          <button
-            onClick={handlePlay}
-            className={`w-16 h-16 rounded-full flex items-center justify-center text-white shadow-lg transition-transform active:scale-95 ${
-              state.isPlaying
-                ? 'bg-indigo-600 hover:bg-indigo-700'
-                : 'bg-indigo-600 hover:bg-indigo-700'
-            }`}
-            aria-label={state.isPlaying ? 'Pause' : 'Play'}
-          >
-            {state.isPlaying ? (
-              <Pause className="w-7 h-7" />
-            ) : (
-              <Play className="w-7 h-7 ml-1" />
-            )}
-          </button>
-
-          <button
-            onClick={increaseFontSize}
-            className="w-10 h-10 rounded-xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"
-            aria-label="Increase font size"
-          >
-            <Plus className="w-4 h-4" />
-          </button>
-        </div>
-
-        {/* Secondary Controls */}
-        <div className="flex items-center justify-center gap-4 pb-5 px-4">
-          {/* Speed */}
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-gray-500 dark:text-gray-400 w-10">Speed</span>
-            <select
-              value={state.speed}
-              onChange={(e) => setSpeed(parseFloat(e.target.value))}
-              className="px-2 py-1.5 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 text-xs border-0 focus:ring-2 focus:ring-indigo-500"
+      {/* Floating TTS Controls */}
+      <div className="fixed bottom-0 left-0 right-0 border-t border-gray-200/50 dark:border-gray-800/50 bg-white/80 dark:bg-gray-900/80 backdrop-blur-md pb-safe safe-area-bottom shadow-[0_-8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_-8px_30px_rgb(0,0,0,0.2)] animate-slide-up">
+        <div className="max-w-2xl mx-auto">
+          {/* Main Controls */}
+          <div className="flex items-center justify-center gap-6 py-5 px-4">
+            <button
+              onClick={decreaseFontSize}
+              className="w-12 h-12 rounded-2xl bg-gray-100/50 dark:bg-gray-800/50 flex items-center justify-center text-gray-600 dark:text-gray-400 hover:bg-gray-200/50 dark:hover:bg-gray-700/50 transition-colors"
+              aria-label="Decrease font size"
             >
-              <option value={0.5}>0.5x</option>
-              <option value={0.75}>0.75x</option>
-              <option value={1}>1x</option>
-              <option value={1.25}>1.25x</option>
-              <option value={1.5}>1.5x</option>
-              <option value={2}>2x</option>
-            </select>
+              <Minus className="w-5 h-5" />
+            </button>
+
+            <button
+              onClick={handleStop}
+              className="w-14 h-14 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors shadow-sm"
+              aria-label="Stop"
+            >
+              <Square className="w-5 h-5 fill-current" />
+            </button>
+
+            <button
+              onClick={handlePlay}
+              className={`w-16 h-16 rounded-full flex items-center justify-center text-white shadow-xl transition-all duration-300 active:scale-95 ${
+                state.isPlaying
+                  ? 'bg-indigo-600 hover:bg-indigo-700 shadow-indigo-500/30'
+                  : 'bg-indigo-600 hover:bg-indigo-700 shadow-indigo-500/30'
+              }`}
+              aria-label={state.isPlaying ? 'Pause' : 'Play'}
+            >
+              {state.isPlaying ? (
+                <Pause className="w-7 h-7 fill-current" />
+              ) : (
+                <Play className="w-7 h-7 ml-1 fill-current" />
+              )}
+            </button>
+
+            <button
+              onClick={increaseFontSize}
+              className="w-12 h-12 rounded-2xl bg-gray-100/50 dark:bg-gray-800/50 flex items-center justify-center text-gray-600 dark:text-gray-400 hover:bg-gray-200/50 dark:hover:bg-gray-700/50 transition-colors"
+              aria-label="Increase font size"
+            >
+              <Plus className="w-5 h-5" />
+            </button>
           </div>
 
-          {/* Voice */}
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-gray-500 dark:text-gray-400 w-10">Voice</span>
-            <select
-              value={state.selectedVoice || ''}
-              onChange={(e) => setVoice(e.target.value)}
-              className="px-2 py-1.5 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 text-xs border-0 focus:ring-2 focus:ring-indigo-500 max-w-32 truncate"
-            >
-              <option value="">System Default</option>
-              {voices.slice(0, 5).map((voice) => (
-                <option key={voice.name} value={voice.name}>
-                  {voice.name.split(' ')[0]}
-                </option>
-              ))}
-            </select>
+          {/* Secondary Controls */}
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pb-6 px-6">
+            {/* Speed */}
+            <div className="flex items-center gap-3 w-full sm:w-1/2">
+              <span className="text-xs font-medium text-gray-500 dark:text-gray-400 w-10 shrink-0">
+                {state.speed}x
+              </span>
+              <input
+                type="range"
+                min="0.5"
+                max="2"
+                step="0.25"
+                value={state.speed}
+                onChange={(e) => setSpeed(parseFloat(e.target.value))}
+                className="w-full h-1.5 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer accent-indigo-600"
+              />
+            </div>
+
+            {/* Voice */}
+            <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+              <span className="text-xs font-medium text-gray-500 dark:text-gray-400">Voice</span>
+              <select
+                value={state.selectedVoice || ''}
+                onChange={(e) => setVoice(e.target.value)}
+                className="px-3 py-2 rounded-xl bg-gray-100/80 dark:bg-gray-800/80 text-gray-700 dark:text-gray-300 text-xs font-medium border border-gray-200/50 dark:border-gray-700/50 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 max-w-40 truncate shadow-sm transition-all outline-none"
+              >
+                <option value="">System Default</option>
+                {voices.slice(0, 5).map((voice) => (
+                  <option key={voice.name} value={voice.name}>
+                    {voice.name.split(' ')[0]}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
         </div>
       </div>
