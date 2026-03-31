@@ -28,12 +28,12 @@ export default function URLInput({ onFetch, loading }: URLInputProps) {
           onChange={(e) => setUrl(e.target.value)}
           placeholder="Paste any article URL to start reading..."
           disabled={loading}
-          className="w-full pl-12 pr-32 py-4 rounded-2xl border-2 border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:border-indigo-500 focus:bg-white dark:focus:bg-gray-900 disabled:opacity-50 text-base"
+          className="w-full pl-12 pr-32 py-4 rounded-2xl border-2 border-transparent bg-white dark:bg-gray-800 shadow-sm hover:shadow-md text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:border-indigo-500/50 focus:ring-4 focus:ring-indigo-500/10 focus:bg-white dark:focus:bg-gray-800 disabled:opacity-50 text-base transition-all duration-300"
         />
         <button
           type="submit"
           disabled={loading || !url.trim()}
-          className="absolute inset-y-1 right-1 px-5 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 font-medium text-sm transition-colors"
+          className="absolute inset-y-1 right-1 px-5 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 hover:shadow-lg hover:-translate-y-0.5 focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-none flex items-center gap-2 font-medium text-sm transition-all duration-300"
         >
           {loading ? (
             <>
