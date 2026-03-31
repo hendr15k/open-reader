@@ -1,7 +1,7 @@
 import { openDB } from 'idb';
 import { Article } from './types';
 
-const DB_NAME = 'JulesReaderDB';
+const DB_NAME = 'OpenReaderDB';
 const DB_VERSION = 1;
 const STORE_NAME = 'articles';
 

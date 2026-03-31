@@ -42,23 +42,23 @@ export default function SavedArticles({
             <p className="mt-4 text-sm text-gray-500 dark:text-gray-400">Loading your library...</p>
           </div>
         ) : articles.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-20 text-center">
-            <div className="w-20 h-20 bg-gray-100 dark:bg-gray-800 rounded-2xl flex items-center justify-center mb-4">
-              <Bookmark className="w-10 h-10 text-gray-300 dark:text-gray-600" />
+          <div className="flex flex-col items-center justify-center py-20 text-center animate-fade-in">
+            <div className="w-24 h-24 bg-gradient-to-br from-indigo-100 to-purple-100 dark:from-indigo-900/40 dark:to-purple-900/40 rounded-3xl flex items-center justify-center mb-6 shadow-sm transform -rotate-6 hover:rotate-0 transition-transform duration-300">
+              <Bookmark className="w-12 h-12 text-indigo-500 dark:text-indigo-400" />
             </div>
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+            <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
               Your library is empty
             </h2>
-            <p className="text-sm text-gray-500 dark:text-gray-400 max-w-xs">
+            <p className="text-base text-gray-500 dark:text-gray-400 max-w-sm">
               Save articles to read them offline, anywhere, anytime.
             </p>
           </div>
         ) : (
-          <div className="space-y-3">
+          <div className="space-y-4">
             {articles.map((article) => (
               <div
                 key={article.id}
-                className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-4 card-hover"
+                className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 p-5 shadow-sm hover:shadow-md transition-all duration-300 ease-in-out hover:-translate-y-1"
               >
                 <div className="flex items-start justify-between gap-3 mb-3">
                   <button
