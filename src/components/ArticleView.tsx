@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import {
-  Play, Pause, Square, Save, ChevronLeft, Plus,
-  SkipBack, SkipForward, Moon, Timer
+  Play, Pause, Square, Save, ChevronLeft,
+  SkipBack, SkipForward, Moon, Timer, Maximize2, Minimize2
 } from 'lucide-react';
 import { Article } from '../lib/types';
 import { useTTS } from '../hooks/useTTS';
@@ -32,63 +32,42 @@ const SLEEP_OPTIONS = [
 const SPEED_OPTIONS = [0.5, 0.75, 1, 1.25, 1.5, 1.75, 2];
 
 export default function ArticleView({ article, onClose, onSave, isSaved }: ArticleViewProps) {
-  const { state, voices, speak, pause, resume, stop, setSpeed, setVoice, setCurrentSentence, setSleepTimer } = useTTS();
+  const { state, voices, speak, pause, resume, stop, setSpeed, setVoice, setCurrentSentence, setSleepTimer, skipForward, skipBack } = useTTS();
   const [fontSizeIndex, setFontSizeIndex] = useState(1);
   const contentRef = useRef<HTMLDivElement>(null);
   const [showSleepMenu, setShowSleepMenu] = useState(false);
   const [showSpeedMenu, setShowSpeedMenu] = useState(false);
   const [sleepMode, setSleepMode] = useState(false);
+  const [immersiveMode, setImmersiveMode] = useState(false);
 
-  useEffect(() => {
-    speak(article.content);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  useEffect(() => { speak(article.content); }, []);
 
   const handlePlay = () => {
-    if (state.isPlaying) {
-      pause();
-    } else if (state.isPaused) {
-      resume();
-    } else {
-      speak(article.content, state.currentSentence);
-    }
+    if (state.isPlaying) pause();
+    else if (state.isPaused) resume();
+    else speak(article.content, state.currentSentence);
   };
 
-  const handleStop = () => {
-    stop();
-  };
+  const handleStop = () => { stop(); setReadingProgress(0); };
 
-  const skipForward = () => {
-    const next = Math.min(state.currentSentence + 1, state.sentences.length - 1);
-    setCurrentSentence(next);
-    const remainingText = state.sentences.slice(next).join(' ');
-    speechSynthesis.cancel();
-    const utterance = new SpeechSynthesisUtterance(remainingText);
-    const voice = voices.find(v => v.name === state.selectedVoice);
-    if (voice) utterance.voice = voice;
-    utterance.rate = state.speed;
-    speechSynthesis.speak(utterance);
-  };
+  const [readingProgress, setReadingProgress] = useState(0);
 
-  const skipBack = () => {
-    const prev = Math.max(state.currentSentence - 1, 0);
-    setCurrentSentence(prev);
-    const remainingText = state.sentences.slice(prev).join(' ');
-    speechSynthesis.cancel();
-    const utterance = new SpeechSynthesisUtterance(remainingText);
-    const voice = voices.find(v => v.name === state.selectedVoice);
-    if (voice) utterance.voice = voice;
-    utterance.rate = state.speed;
-    speechSynthesis.speak(utterance);
-  };
+  useEffect(() => {
+    const el = contentRef.current;
+    if (!el) return;
+    const handleScroll = () => {
+      const { scrollTop, scrollHeight, clientHeight } = el;
+      const progress = scrollHeight > clientHeight ? (scrollTop / (scrollHeight - clientHeight)) * 100 : 100;
+      setReadingProgress(Math.min(100, Math.max(0, progress)));
+    };
+    el.addEventListener('scroll', handleScroll);
+    return () => el.removeEventListener('scroll', handleScroll);
+  }, []);
 
-  const increaseFontSize = () => {
-    setFontSizeIndex(prev => Math.min(FONT_SIZES.length - 1, prev + 1));
-  };
-
-  const toggleSleepMode = () => {
-    setSleepMode(!sleepMode);
-  };
+  const increaseFontSize = () => setFontSizeIndex(prev => Math.min(FONT_SIZES.length - 1, prev + 1));
+  const decreaseFontSize = () => setFontSizeIndex(prev => Math.max(0, prev - 1));
+  const toggleSleepMode = () => setSleepMode(!sleepMode);
+  const toggleImmersive = () => setImmersiveMode(!immersiveMode);
 
   const formatTime = (totalSeconds: number) => {
     const m = Math.floor(totalSeconds / 60);
@@ -96,26 +75,21 @@ export default function ArticleView({ article, onClose, onSave, isSaved }: Artic
     return `${m}:${s.toString().padStart(2, '0')}`;
   };
 
-  const progressPct = state.sentences.length > 0
+  const textProgress = state.sentences.length > 0
     ? Math.round((state.currentSentence / state.sentences.length) * 100)
     : 0;
 
+  const progressPct = Math.max(textProgress, Math.round(readingProgress));
   const currentFontClass = FONT_SIZES[fontSizeIndex].class;
 
   return (
     <div className={`fixed inset-0 z-50 flex flex-col ${sleepMode ? 'bg-gray-950' : 'bg-white dark:bg-gray-950'} transition-colors duration-500`}>
       {/* Progress Bar */}
-      <div
-        className="h-1 bg-indigo-600 transition-all duration-300"
-        style={{ width: `${progressPct}%` }}
-      />
+      <div className="h-1 bg-indigo-600 transition-all duration-300" style={{ width: `${progressPct}%` }} />
 
       {/* Header */}
-      <div className={`flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-800 ${sleepMode ? 'bg-gray-900 border-gray-700' : 'bg-white dark:bg-gray-900'}`}>
-        <button
-          onClick={onClose}
-          className="w-10 h-10 rounded-xl flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-800"
-        >
+      <div className={`flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-800 ${sleepMode ? 'bg-gray-900 border-gray-700' : 'bg-white dark:bg-gray-900'} transition-opacity duration-300 ${immersiveMode ? 'opacity-0 pointer-events-none h-0 overflow-hidden border-0' : ''}`}>
+        <button onClick={onClose} className="w-10 h-10 rounded-xl flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-800">
           <ChevronLeft className="w-6 h-6 text-gray-700 dark:text-gray-300" />
         </button>
 
@@ -123,31 +97,20 @@ export default function ArticleView({ article, onClose, onSave, isSaved }: Artic
           {state.sleepTimerRemaining !== null && (
             <div className="flex items-center gap-1 px-2 py-1 bg-indigo-100 dark:bg-indigo-900/50 rounded-full">
               <Timer className="w-3 h-3 text-indigo-600 dark:text-indigo-400" />
-              <span className="text-xs font-medium text-indigo-600 dark:text-indigo-400 tabular-nums">
-                {formatTime(state.sleepTimerRemaining)}
-              </span>
+              <span className="text-xs font-medium text-indigo-600 dark:text-indigo-400 tabular-nums">{formatTime(state.sleepTimerRemaining)}</span>
             </div>
           )}
-          <span className={`text-xs tabular-nums ${sleepMode ? 'text-gray-500' : 'text-gray-500 dark:text-gray-400'}`}>
-            {progressPct}% • S {state.currentSentence + 1}/{state.sentences.length}
-          </span>
+          <span className="text-xs tabular-nums text-gray-500 dark:text-gray-400">{progressPct}%</span>
         </div>
 
         <div className="flex items-center gap-2">
-          <button
-            onClick={toggleSleepMode}
-            className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors ${
-              sleepMode ? 'bg-indigo-600 text-white' : 'hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 dark:text-gray-400'
-            }`}
-          >
+          <button onClick={toggleImmersive} className={`w-10 h-10 rounded-xl flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 dark:text-gray-400`}>
+            {immersiveMode ? <Minimize2 className="w-5 h-5" /> : <Maximize2 className="w-5 h-5" />}
+          </button>
+          <button onClick={toggleSleepMode} className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors ${sleepMode ? 'bg-indigo-600 text-white' : 'hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 dark:text-gray-400'}`}>
             <Moon className="w-5 h-5" />
           </button>
-          <button
-            onClick={onSave}
-            className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors ${
-              isSaved ? 'bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400' : 'hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 dark:text-gray-400'
-            }`}
-          >
+          <button onClick={onSave} className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors ${isSaved ? 'bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400' : 'hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 dark:text-gray-400'}`}>
             <Save className="w-5 h-5" />
           </button>
         </div>
@@ -155,12 +118,10 @@ export default function ArticleView({ article, onClose, onSave, isSaved }: Artic
 
       {/* Article Content */}
       <div ref={contentRef} className="flex-1 overflow-y-auto">
-        <article className={`max-w-2xl mx-auto px-5 py-8 ${sleepMode ? 'text-gray-400' : ''}`}>
-          {!sleepMode && (
+        <article className={`max-w-2xl mx-auto px-5 py-8 ${sleepMode ? 'text-gray-400' : ''} ${immersiveMode ? 'pt-4' : ''}`}>
+          {!sleepMode && !immersiveMode && (
             <header className="mb-8">
-              <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white leading-tight mb-4">
-                {article.title}
-              </h1>
+              <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white leading-tight mb-4">{article.title}</h1>
               <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-gray-500 dark:text-gray-400">
                 {article.author && <span className="font-medium text-gray-700 dark:text-gray-300">{article.author}</span>}
                 {article.date && <><span>•</span><span>{article.date}</span></>}
@@ -176,39 +137,29 @@ export default function ArticleView({ article, onClose, onSave, isSaved }: Artic
                 const isCurrent = idx === state.currentSentence;
                 const isPast = idx < state.currentSentence;
                 return (
-                  <p
-                    key={idx}
-                    className={`leading-relaxed mb-2 transition-all duration-200 cursor-pointer rounded px-1 py-0.5 ${
-                      isCurrent
-                        ? 'bg-indigo-100 dark:bg-indigo-900/40 text-indigo-900 dark:text-indigo-100 font-medium -mx-1'
-                        : isPast
-                          ? sleepMode ? 'text-gray-700' : 'text-gray-500 dark:text-gray-500'
-                          : sleepMode ? 'text-gray-600' : 'text-gray-700 dark:text-gray-300'
-                    }`}
+                  <p key={idx} className={`leading-relaxed mb-2 transition-all duration-200 cursor-pointer rounded px-1 py-0.5 ${
+                    isCurrent ? 'bg-indigo-100 dark:bg-indigo-900/40 text-indigo-900 dark:text-indigo-100 font-medium -mx-1'
+                      : isPast ? (sleepMode ? 'text-gray-700' : 'text-gray-500 dark:text-gray-500')
+                      : (sleepMode ? 'text-gray-600' : 'text-gray-700 dark:text-gray-300')
+                  }`}
                     onClick={() => {
                       setCurrentSentence(idx);
-                      const remainingText = state.sentences.slice(idx).join(' ');
                       speechSynthesis.cancel();
-                      const utterance = new SpeechSynthesisUtterance(remainingText);
+                      const remaining = state.sentences.slice(idx).join(' ');
+                      const u = new SpeechSynthesisUtterance(remaining);
                       const voice = voices.find(v => v.name === state.selectedVoice);
-                      if (voice) utterance.voice = voice;
-                      utterance.rate = state.speed;
-                      speechSynthesis.speak(utterance);
+                      if (voice) u.voice = voice;
+                      u.rate = state.speed;
+                      speechSynthesis.speak(u);
                     }}
-                  >
-                    {sentence}
-                  </p>
+                  >{sentence}</p>
                 );
               })
             ) : (
               article.content.split('\n').map((paragraph, idx) => {
                 const trimmed = paragraph.trim();
                 if (!trimmed) return <div key={idx} className="h-4" />;
-                return (
-                  <p key={idx} className={`${sleepMode ? 'text-gray-500' : 'text-gray-700 dark:text-gray-300'} leading-relaxed mb-5`}>
-                    {trimmed}
-                  </p>
-                );
+                return <p key={idx} className={`${sleepMode ? 'text-gray-500' : 'text-gray-700 dark:text-gray-300'} leading-relaxed mb-5`}>{trimmed}</p>;
               })
             )}
           </div>
@@ -216,28 +167,17 @@ export default function ArticleView({ article, onClose, onSave, isSaved }: Artic
       </div>
 
       {/* TTS Controls */}
-      <div className={`border-t border-gray-200 dark:border-gray-800 ${sleepMode ? 'bg-gray-900 border-gray-700' : 'bg-white dark:bg-gray-900'}`}>
+      <div className={`border-t border-gray-200 dark:border-gray-800 ${sleepMode ? 'bg-gray-900 border-gray-700' : 'bg-white dark:bg-gray-900'} transition-opacity duration-300 ${immersiveMode ? 'opacity-40 hover:opacity-100' : ''}`}>
         <div className="flex items-center justify-center gap-3 py-4 px-4">
           {/* Speed */}
           <div className="relative">
-            <button
-              onClick={() => setShowSpeedMenu(!showSpeedMenu)}
-              className={`w-12 h-12 rounded-2xl ${sleepMode ? 'bg-gray-800' : 'bg-gray-100/50 dark:bg-gray-800/50'} flex items-center justify-center ${sleepMode ? 'text-gray-400' : 'text-gray-600 dark:text-gray-400'} hover:bg-gray-200/50 dark:hover:bg-gray-700/50 transition-colors text-sm font-bold`}
-            >
+            <button onClick={() => setShowSpeedMenu(!showSpeedMenu)} className={`w-12 h-12 rounded-2xl ${sleepMode ? 'bg-gray-800' : 'bg-gray-100/50 dark:bg-gray-800/50'} flex items-center justify-center ${sleepMode ? 'text-gray-400' : 'text-gray-600 dark:text-gray-400'} hover:bg-gray-200/50 dark:hover:bg-gray-700/50 transition-colors text-sm font-bold`}>
               {state.speed}x
             </button>
             {showSpeedMenu && (
               <div className="absolute bottom-14 left-0 bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-200 dark:border-gray-700 p-2 z-50">
                 {SPEED_OPTIONS.map(s => (
-                  <button
-                    key={s}
-                    onClick={() => { setSpeed(s); setShowSpeedMenu(false); }}
-                    className={`w-full px-4 py-2 text-sm rounded-lg text-left ${
-                      state.speed === s ? 'bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400 font-medium' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
-                    }`}
-                  >
-                    {s}x
-                  </button>
+                  <button key={s} onClick={() => { setSpeed(s); setShowSpeedMenu(false); }} className={`w-full px-4 py-2 text-sm rounded-lg text-left ${state.speed === s ? 'bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400 font-medium' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'}`}>{s}x</button>
                 ))}
               </div>
             )}
@@ -264,56 +204,34 @@ export default function ArticleView({ article, onClose, onSave, isSaved }: Artic
           </button>
 
           {/* Font Size */}
-          <button onClick={increaseFontSize} className={`w-12 h-12 rounded-2xl ${sleepMode ? 'bg-gray-800' : 'bg-gray-100/50 dark:bg-gray-800/50'} flex items-center justify-center ${sleepMode ? 'text-gray-400' : 'text-gray-600 dark:text-gray-400'} hover:bg-gray-200/50 dark:hover:bg-gray-700/50`}>
-            <Plus className="w-5 h-5" />
-          </button>
+          <div className="flex items-center gap-1">
+            <button onClick={decreaseFontSize} className={`w-10 h-10 rounded-xl ${sleepMode ? 'bg-gray-800' : 'bg-gray-100/50 dark:bg-gray-800/50'} flex items-center justify-center ${sleepMode ? 'text-gray-400' : 'text-gray-600 dark:text-gray-400'} hover:bg-gray-200/50 text-sm font-bold`}>A-</button>
+            <button onClick={increaseFontSize} className={`w-10 h-10 rounded-xl ${sleepMode ? 'bg-gray-800' : 'bg-gray-100/50 dark:bg-gray-800/50'} flex items-center justify-center ${sleepMode ? 'text-gray-400' : 'text-gray-600 dark:text-gray-400'} hover:bg-gray-200/50 text-sm font-bold`}>A+</button>
+          </div>
         </div>
 
         {/* Secondary Controls */}
-        <div className="flex items-center justify-between px-6 pb-4">
+        <div className={`flex items-center justify-between px-6 pb-4 transition-opacity duration-300 ${immersiveMode ? 'opacity-0 pointer-events-none h-0 overflow-hidden' : ''}`}>
           {/* Sleep Timer */}
           <div className="relative">
-            <button
-              onClick={() => setShowSleepMenu(!showSleepMenu)}
-              className={`flex items-center gap-2 px-3 py-2 rounded-xl ${
-                state.sleepTimerMinutes
-                  ? 'bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400'
-                  : sleepMode ? 'bg-gray-800 text-gray-400' : 'bg-gray-100/50 dark:bg-gray-800/50 text-gray-500 dark:text-gray-400'
-              } text-xs font-medium`}
-            >
+            <button onClick={() => setShowSleepMenu(!showSleepMenu)} className={`flex items-center gap-2 px-3 py-2 rounded-xl ${state.sleepTimerMinutes ? 'bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400' : sleepMode ? 'bg-gray-800 text-gray-400' : 'bg-gray-100/50 dark:bg-gray-800/50 text-gray-500 dark:text-gray-400'} text-xs font-medium`}>
               <Timer className="w-3.5 h-3.5" />
               {state.sleepTimerMinutes ? `${state.sleepTimerMinutes} Min` : 'Sleep Timer'}
             </button>
             {showSleepMenu && (
               <div className="absolute bottom-12 left-0 bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-200 dark:border-gray-700 p-2 z-50 min-w-[140px]">
                 {SLEEP_OPTIONS.map(opt => (
-                  <button
-                    key={opt.label}
-                    onClick={() => { setSleepTimer(opt.minutes); setShowSleepMenu(false); }}
-                    className={`w-full px-3 py-2 text-sm rounded-lg text-left ${
-                      state.sleepTimerMinutes === opt.minutes ? 'bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400 font-medium' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
-                    }`}
-                  >
-                    {opt.label}
-                  </button>
+                  <button key={opt.label} onClick={() => { setSleepTimer(opt.minutes); setShowSleepMenu(false); }} className={`w-full px-3 py-2 text-sm rounded-lg text-left ${state.sleepTimerMinutes === opt.minutes ? 'bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400 font-medium' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'}`}>{opt.label}</button>
                 ))}
               </div>
             )}
           </div>
 
           {/* Voice */}
-          <select
-            value={state.selectedVoice || ''}
-            onChange={(e) => setVoice(e.target.value)}
-            className={`px-3 py-2 rounded-xl ${sleepMode ? 'bg-gray-800 text-gray-400' : 'bg-gray-100/80 dark:bg-gray-800/80 text-gray-700 dark:text-gray-300'} text-xs font-medium border border-gray-200/50 dark:border-gray-700/50 max-w-32 truncate`}
-          >
+          <select value={state.selectedVoice || ''} onChange={(e) => setVoice(e.target.value)} className={`px-3 py-2 rounded-xl ${sleepMode ? 'bg-gray-800 text-gray-400' : 'bg-gray-100/80 dark:bg-gray-800/80 text-gray-700 dark:text-gray-300'} text-xs font-medium border border-gray-200/50 dark:border-gray-700/50 max-w-32 truncate`}>
             <option value="">Stimme</option>
-            {voices.filter(v => v.lang.startsWith('de')).slice(0, 3).map(v => (
-              <option key={v.name} value={v.name}>{v.name.split(' ')[0]}</option>
-            ))}
-            {voices.filter(v => !v.lang.startsWith('de')).slice(0, 3).map(v => (
-              <option key={v.name} value={v.name}>{v.name.split(' ')[0]}</option>
-            ))}
+            {voices.filter(v => v.lang.startsWith('de')).slice(0, 3).map(v => <option key={v.name} value={v.name}>{v.name.split(' ')[0]}</option>)}
+            {voices.filter(v => !v.lang.startsWith('de')).slice(0, 3).map(v => <option key={v.name} value={v.name}>{v.name.split(' ')[0]}</option>)}
           </select>
         </div>
       </div>
