@@ -39,14 +39,11 @@ export default function ArticleView({ article, onClose, onSave, isSaved }: Artic
   const [showSpeedMenu, setShowSpeedMenu] = useState(false);
   const [sleepMode, setSleepMode] = useState(false);
   const [immersiveMode, setImmersiveMode] = useState(false);
-  const [showBookmarks, setShowBookmarks] = useState(false);
   const [bookmarkedSentences, setBookmarked] = useState<Set<number>>(new Set());
   const [readingProgress, setReadingProgress] = useState(0);
 
-  // Auto-play
   useEffect(() => { speak(article.content); }, []);
 
-  // Track scroll progress
   useEffect(() => {
     const el = contentRef.current;
     if (!el) return;
@@ -67,18 +64,12 @@ export default function ArticleView({ article, onClose, onSave, isSaved }: Artic
 
   const handleStop = () => { stop(); };
 
-  const toggleBookmark = (idx: number, sentence: string) => {
-    const newBookmarks = new Set(bookmarkedSentences);
-    if (newBookmarks.has(idx)) {
-      newBookmarks.delete(idx);
-    } else {
-      newBookmarks.add(idx);
-    }
-    setBookmarked(newBookmarks);
+  const toggleBookmark = (idx: number) => {
+    const nb = new Set(bookmarkedSentences);
+    if (nb.has(idx)) nb.delete(idx); else nb.add(idx);
+    setBookmarked(nb);
   };
 
-  const increaseFontSize = () => setFontSizeIndex(prev => Math.min(FONT_SIZES.length - 1, prev + 1));
-  const decreaseFontSize = () => setFontSizeIndex(prev => Math.max(0, prev - 1));
   const toggleSleepMode = () => setSleepMode(!sleepMode);
   const toggleImmersive = () => setImmersiveMode(!immersiveMode);
 
@@ -88,24 +79,18 @@ export default function ArticleView({ article, onClose, onSave, isSaved }: Artic
     return `${m}:${s.toString().padStart(2, '0')}`;
   };
 
-  const textProgress = state.sentences.length > 0
-    ? Math.round((state.currentSentence / state.sentences.length) * 100)
-    : 0;
-
+  const textProgress = state.sentences.length > 0 ? Math.round((state.currentSentence / state.sentences.length) * 100) : 0;
   const progressPct = Math.max(textProgress, Math.round(readingProgress));
   const currentFontClass = FONT_SIZES[fontSizeIndex].class;
 
   return (
     <div className={`fixed inset-0 z-50 flex flex-col ${sleepMode ? 'bg-gray-950' : 'bg-white dark:bg-gray-950'} transition-colors duration-500`}>
-      {/* Progress Bar */}
       <div className="h-1 bg-indigo-600 transition-all duration-300" style={{ width: `${progressPct}%` }} />
 
-      {/* Header */}
       <div className={`flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-800 ${sleepMode ? 'bg-gray-900 border-gray-700' : 'bg-white dark:bg-gray-900'} transition-all duration-300 ${immersiveMode ? 'opacity-0 pointer-events-none h-0 overflow-hidden border-0' : ''}`}>
         <button onClick={onClose} className="w-10 h-10 rounded-xl flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-800">
           <ChevronLeft className="w-6 h-6 text-gray-700 dark:text-gray-300" />
         </button>
-
         <div className="flex items-center gap-2">
           {state.sleepTimerRemaining !== null && (
             <div className="flex items-center gap-1 px-2 py-1 bg-indigo-100 dark:bg-indigo-900/50 rounded-full">
@@ -114,28 +99,21 @@ export default function ArticleView({ article, onClose, onSave, isSaved }: Artic
             </div>
           )}
           <span className="text-xs tabular-nums text-gray-500 dark:text-gray-400">{progressPct}%</span>
-          {bookmarkedSentences.size > 0 && (
-            <span className="text-xs text-amber-600 dark:text-amber-400 font-medium">{bookmarkedSentences.size} 🔖</span>
-          )}
+          {bookmarkedSentences.size > 0 && <span className="text-xs text-amber-600 dark:text-amber-400 font-medium">{bookmarkedSentences.size} 🔖</span>}
         </div>
-
-        <div className="flex items-center gap-2">
-          <button onClick={toggleImmersive} className="w-10 h-10 rounded-xl flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 dark:text-gray-400">
-            {immersiveMode ? <Minimize2 className="w-5 h-5" /> : <Maximize2 className="w-5 h-5" />}
+        <div className="flex items-center gap-1">
+          <button onClick={toggleImmersive} className="w-9 h-9 rounded-xl flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 dark:text-gray-400">
+            {immersiveMode ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
           </button>
-          <button onClick={toggleSleepMode} className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors ${sleepMode ? 'bg-indigo-600 text-white' : 'hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 dark:text-gray-400'}`}>
-            <Moon className="w-5 h-5" />
+          <button onClick={toggleSleepMode} className={`w-9 h-9 rounded-xl flex items-center justify-center transition-colors ${sleepMode ? 'bg-indigo-600 text-white' : 'hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 dark:text-gray-400'}`}>
+            <Moon className="w-4 h-4" />
           </button>
-          <button onClick={() => setShowBookmarks(!showBookmarks)} className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors ${showBookmarks ? 'bg-amber-100 dark:bg-amber-900/50 text-amber-600 dark:text-amber-400' : 'hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 dark:text-gray-400'}`}>
-            <Bookmark className="w-5 h-5" />
-          </button>
-          <button onClick={onSave} className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors ${isSaved ? 'bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400' : 'hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 dark:text-gray-400'}`}>
-            <Save className="w-5 h-5" />
+          <button onClick={onSave} className={`w-9 h-9 rounded-xl flex items-center justify-center transition-colors ${isSaved ? 'bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400' : 'hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 dark:text-gray-400'}`}>
+            <Save className="w-4 h-4" />
           </button>
         </div>
       </div>
 
-      {/* Article Content */}
       <div ref={contentRef} className="flex-1 overflow-y-auto">
         <article className={`max-w-2xl mx-auto px-5 py-8 ${sleepMode ? 'text-gray-400' : ''} ${immersiveMode ? 'pt-4' : ''}`}>
           {!sleepMode && !immersiveMode && (
@@ -149,7 +127,6 @@ export default function ArticleView({ article, onClose, onSave, isSaved }: Artic
               </div>
             </header>
           )}
-
           <div className={`prose dark:prose-invert max-w-none ${currentFontClass}`}>
             {state.sentences.length > 0 ? (
               state.sentences.map((sentence, idx) => {
@@ -158,32 +135,23 @@ export default function ArticleView({ article, onClose, onSave, isSaved }: Artic
                 const isBookmarked = bookmarkedSentences.has(idx);
                 return (
                   <div key={idx} className="flex gap-1 group items-start">
-                    {/* Bookmark button */}
-                    <button
-                      onClick={(e) => { e.stopPropagation(); toggleBookmark(idx, sentence); }}
-                      className={`flex-shrink-0 w-6 h-6 mt-1 rounded flex items-center justify-center transition-colors ${
-                        isBookmarked ? 'text-amber-500 bg-amber-100 dark:bg-amber-900/30' : 'text-transparent group-hover:text-gray-400 dark:group-hover:text-gray-500'
-                      }`}
-                    >
+                    <button onClick={() => toggleBookmark(idx)} className={`flex-shrink-0 w-6 h-6 mt-1 rounded flex items-center justify-center transition-colors ${isBookmarked ? 'text-amber-500 bg-amber-100 dark:bg-amber-900/30' : 'text-transparent group-hover:text-gray-400 dark:group-hover:text-gray-500'}`}>
                       <Bookmark className="w-3.5 h-3.5" />
                     </button>
-                    <p
-                      className={`flex-1 leading-relaxed mb-2 transition-all duration-200 cursor-pointer rounded px-1 py-0.5 ${
-                        isCurrent ? 'bg-indigo-100 dark:bg-indigo-900/40 text-indigo-900 dark:text-indigo-100 font-medium -mx-1'
-                          : isPast ? (sleepMode ? 'text-gray-700' : 'text-gray-500 dark:text-gray-500')
-                          : (sleepMode ? 'text-gray-600' : 'text-gray-700 dark:text-gray-300')
-                      }`}
+                    <p className={`flex-1 leading-relaxed mb-2 transition-all duration-200 cursor-pointer rounded px-1 py-0.5 ${
+                      isCurrent ? 'bg-indigo-100 dark:bg-indigo-900/40 text-indigo-900 dark:text-indigo-100 font-medium -mx-1'
+                        : isPast ? (sleepMode ? 'text-gray-700' : 'text-gray-500 dark:text-gray-500')
+                        : (sleepMode ? 'text-gray-600' : 'text-gray-700 dark:text-gray-300')
+                    }`}
                       onClick={() => {
                         setCurrentSentence(idx);
                         speechSynthesis.cancel();
-                        const remaining = state.sentences.slice(idx).join(' ');
-                        const u = new SpeechSynthesisUtterance(remaining);
+                        const u = new SpeechSynthesisUtterance(state.sentences.slice(idx).join(' '));
                         const voice = voices.find(v => v.name === state.selectedVoice);
                         if (voice) u.voice = voice;
                         u.rate = state.speed;
                         speechSynthesis.speak(u);
-                      }}
-                    >{sentence}</p>
+                      }}>{sentence}</p>
                   </div>
                 );
               })
@@ -198,73 +166,33 @@ export default function ArticleView({ article, onClose, onSave, isSaved }: Artic
         </article>
       </div>
 
-      {/* TTS Controls */}
       <div className={`border-t border-gray-200 dark:border-gray-800 ${sleepMode ? 'bg-gray-900 border-gray-700' : 'bg-white dark:bg-gray-900'} transition-opacity duration-300 ${immersiveMode ? 'opacity-40 hover:opacity-100' : ''}`}>
         <div className="flex items-center justify-center gap-3 py-4 px-4">
-          {/* Speed */}
           <div className="relative">
-            <button onClick={() => setShowSpeedMenu(!showSpeedMenu)} className={`w-12 h-12 rounded-2xl ${sleepMode ? 'bg-gray-800' : 'bg-gray-100/50 dark:bg-gray-800/50'} flex items-center justify-center ${sleepMode ? 'text-gray-400' : 'text-gray-600 dark:text-gray-400'} hover:bg-gray-200/50 dark:hover:bg-gray-700/50 transition-colors text-sm font-bold`}>
-              {state.speed}x
-            </button>
+            <button onClick={() => setShowSpeedMenu(!showSpeedMenu)} className={`w-12 h-12 rounded-2xl ${sleepMode ? 'bg-gray-800' : 'bg-gray-100/50 dark:bg-gray-800/50'} flex items-center justify-center ${sleepMode ? 'text-gray-400' : 'text-gray-600 dark:text-gray-400'} hover:bg-gray-200/50 dark:hover:bg-gray-700/50 text-sm font-bold`}>{state.speed}x</button>
             {showSpeedMenu && (
               <div className="absolute bottom-14 left-0 bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-200 dark:border-gray-700 p-2 z-50">
-                {SPEED_OPTIONS.map(s => (
-                  <button key={s} onClick={() => { setSpeed(s); setShowSpeedMenu(false); }} className={`w-full px-4 py-2 text-sm rounded-lg text-left ${state.speed === s ? 'bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400 font-medium' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'}`}>{s}x</button>
-                ))}
+                {SPEED_OPTIONS.map(s => (<button key={s} onClick={() => { setSpeed(s); setShowSpeedMenu(false); }} className={`w-full px-4 py-2 text-sm rounded-lg text-left ${state.speed === s ? 'bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400 font-medium' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'}`}>{s}x</button>))}
               </div>
             )}
           </div>
-
-          {/* Skip Back */}
-          <button onClick={skipBack} className={`w-12 h-12 rounded-xl ${sleepMode ? 'bg-gray-800' : 'bg-gray-100/50 dark:bg-gray-800/50'} flex items-center justify-center ${sleepMode ? 'text-gray-400' : 'text-gray-600 dark:text-gray-400'} hover:bg-gray-200/50 dark:hover:bg-gray-700/50`}>
-            <SkipBack className="w-5 h-5" />
-          </button>
-
-          {/* Stop */}
-          <button onClick={handleStop} className={`w-14 h-14 rounded-full ${sleepMode ? 'bg-gray-800' : 'bg-gray-100 dark:bg-gray-800'} flex items-center justify-center ${sleepMode ? 'text-gray-400' : 'text-gray-600 dark:text-gray-400'} hover:bg-gray-200 dark:hover:bg-gray-700 shadow-sm`}>
-            <Square className="w-5 h-5 fill-current" />
-          </button>
-
-          {/* Play/Pause */}
+          <button onClick={skipBack} className={`w-12 h-12 rounded-xl ${sleepMode ? 'bg-gray-800' : 'bg-gray-100/50 dark:bg-gray-800/50'} flex items-center justify-center ${sleepMode ? 'text-gray-400' : 'text-gray-600 dark:text-gray-400'} hover:bg-gray-200/50 dark:hover:bg-gray-700/50`}><SkipBack className="w-5 h-5" /></button>
+          <button onClick={handleStop} className={`w-14 h-14 rounded-full ${sleepMode ? 'bg-gray-800' : 'bg-gray-100 dark:bg-gray-800'} flex items-center justify-center ${sleepMode ? 'text-gray-400' : 'text-gray-600 dark:text-gray-400'} hover:bg-gray-200 dark:hover:bg-gray-700 shadow-sm`}><Square className="w-5 h-5 fill-current" /></button>
           <button onClick={handlePlay} className="w-16 h-16 rounded-full flex items-center justify-center text-white bg-indigo-600 hover:bg-indigo-700 shadow-xl shadow-indigo-500/30 transition-all duration-300 active:scale-95">
             {state.isPlaying ? <Pause className="w-7 h-7 fill-current" /> : <Play className="w-7 h-7 ml-1 fill-current" />}
           </button>
-
-          {/* Skip Forward */}
-          <button onClick={skipForward} className={`w-12 h-12 rounded-xl ${sleepMode ? 'bg-gray-800' : 'bg-gray-100/50 dark:bg-gray-800/50'} flex items-center justify-center ${sleepMode ? 'text-gray-400' : 'text-gray-600 dark:text-gray-400'} hover:bg-gray-200/50 dark:hover:bg-gray-700/50`}>
-            <SkipForward className="w-5 h-5" />
-          </button>
-
-          {/* Font Size */}
+          <button onClick={skipForward} className={`w-12 h-12 rounded-xl ${sleepMode ? 'bg-gray-800' : 'bg-gray-100/50 dark:bg-gray-800/50'} flex items-center justify-center ${sleepMode ? 'text-gray-400' : 'text-gray-600 dark:text-gray-400'} hover:bg-gray-200/50 dark:hover:bg-gray-700/50`}><SkipForward className="w-5 h-5" /></button>
           <div className="flex items-center gap-1">
             <button onClick={() => setFontSizeIndex(p => Math.max(0, p - 1))} className={`w-10 h-10 rounded-xl ${sleepMode ? 'bg-gray-800' : 'bg-gray-100/50 dark:bg-gray-800/50'} flex items-center justify-center ${sleepMode ? 'text-gray-400' : 'text-gray-600 dark:text-gray-400'} hover:bg-gray-200/50 text-xs font-bold`}>A-</button>
             <button onClick={() => setFontSizeIndex(p => Math.min(FONT_SIZES.length - 1, p + 1))} className={`w-10 h-10 rounded-xl ${sleepMode ? 'bg-gray-800' : 'bg-gray-100/50 dark:bg-gray-800/50'} flex items-center justify-center ${sleepMode ? 'text-gray-400' : 'text-gray-600 dark:text-gray-400'} hover:bg-gray-200/50 text-xs font-bold`}>A+</button>
           </div>
         </div>
-
-        {/* Secondary Controls */}
         <div className={`flex items-center justify-between px-6 pb-4 transition-all duration-300 ${immersiveMode ? 'opacity-0 pointer-events-none h-0 overflow-hidden' : ''}`}>
-          {/* Sleep Timer */}
           <div className="relative">
-            <button onClick={() => setShowSleepMenu(!showSleepMenu)} className={`flex items-center gap-2 px-3 py-2 rounded-xl ${state.sleepTimerMinutes ? 'bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400' : sleepMode ? 'bg-gray-800 text-gray-400' : 'bg-gray-100/50 dark:bg-gray-800/50 text-gray-500 dark:text-gray-400'} text-xs font-medium`}>
-              <Timer className="w-3.5 h-3.5" />
-              {state.sleepTimerMinutes ? `${state.sleepTimerMinutes} Min` : 'Sleep Timer'}
-            </button>
-            {showSleepMenu && (
-              <div className="absolute bottom-12 left-0 bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-200 dark:border-gray-700 p-2 z-50 min-w-[140px]">
-                {SLEEP_OPTIONS.map(opt => (
-                  <button key={opt.label} onClick={() => { setSleepTimer(opt.minutes); setShowSleepMenu(false); }} className={`w-full px-3 py-2 text-sm rounded-lg text-left ${state.sleepTimerMinutes === opt.minutes ? 'bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400 font-medium' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'}`}>{opt.label}</button>
-                ))}
-              </div>
-            )}
+            <button onClick={() => setShowSleepMenu(!showSleepMenu)} className={`flex items-center gap-2 px-3 py-2 rounded-xl ${state.sleepTimerMinutes ? 'bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400' : sleepMode ? 'bg-gray-800 text-gray-400' : 'bg-gray-100/50 dark:bg-gray-800/50 text-gray-500 dark:text-gray-400'} text-xs font-medium`}><Timer className="w-3.5 h-3.5" />{state.sleepTimerMinutes ? `${state.sleepTimerMinutes} Min` : 'Sleep Timer'}</button>
+            {showSleepMenu && (<div className="absolute bottom-12 left-0 bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-200 dark:border-gray-700 p-2 z-50 min-w-[140px]">{SLEEP_OPTIONS.map(opt => (<button key={opt.label} onClick={() => { setSleepTimer(opt.minutes); setShowSleepMenu(false); }} className={`w-full px-3 py-2 text-sm rounded-lg text-left ${state.sleepTimerMinutes === opt.minutes ? 'bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400 font-medium' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'}`}>{opt.label}</button>))}</div>)}
           </div>
-
-          {/* Voice */}
-          <select value={state.selectedVoice || ''} onChange={(e) => setVoice(e.target.value)} className={`px-3 py-2 rounded-xl ${sleepMode ? 'bg-gray-800 text-gray-400' : 'bg-gray-100/80 dark:bg-gray-800/80 text-gray-700 dark:text-gray-300'} text-xs font-medium border border-gray-200/50 dark:border-gray-700/50 max-w-32 truncate`}>
-            <option value="">Stimme</option>
-            {voices.filter(v => v.lang.startsWith('de')).slice(0, 3).map(v => <option key={v.name} value={v.name}>{v.name.split(' ')[0]}</option>)}
-            {voices.filter(v => !v.lang.startsWith('de')).slice(0, 3).map(v => <option key={v.name} value={v.name}>{v.name.split(' ')[0]}</option>)}
-          </select>
+          <select value={state.selectedVoice || ''} onChange={(e) => setVoice(e.target.value)} className={`px-3 py-2 rounded-xl ${sleepMode ? 'bg-gray-800 text-gray-400' : 'bg-gray-100/80 dark:bg-gray-800/80 text-gray-700 dark:text-gray-300'} text-xs font-medium border border-gray-200/50 dark:border-gray-700/50 max-w-32 truncate`}><option value="">Stimme</option>{voices.filter(v => v.lang.startsWith('de')).slice(0, 3).map(v => <option key={v.name} value={v.name}>{v.name.split(' ')[0]}</option>)}{voices.filter(v => !v.lang.startsWith('de')).slice(0, 3).map(v => <option key={v.name} value={v.name}>{v.name.split(' ')[0]}</option>)}</select>
         </div>
       </div>
     </div>
