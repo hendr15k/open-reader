@@ -1,12 +1,15 @@
 export interface Article {
   id: string;
-  url: string;
+  url?: string;
   title: string;
   content: string;
   author?: string;
   date?: string;
   readingTime?: number;
   savedAt: number;
+  source?: 'url' | 'file';
+  fileName?: string;
+  totalWords?: number;
 }
 
 export interface TTSState {
@@ -17,4 +20,16 @@ export interface TTSState {
   selectedVoice: string | null;
 }
 
-export type Tab = 'home' | 'saved' | 'settings';
+export type Tab = 'home' | 'saved' | 'upload' | 'settings';
+
+export interface UploadedFile {
+  id: string;
+  fileName: string;
+  fileType: string;
+  size: number;
+  title: string;
+  content: string;
+  uploadedAt: number;
+  totalWords: number;
+  readingTime: number;
+}

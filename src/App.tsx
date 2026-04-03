@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
-import { BookOpen, Bookmark, Settings, Moon, Sun, Rss, Zap, Headphones } from 'lucide-react';
+import { BookOpen, Bookmark, Settings, Moon, Sun, Rss, Zap, Headphones, Upload } from 'lucide-react';
 import { Article, Tab } from './lib/types';
 import { fetchArticle } from './lib/jina';
 import { useArticleStorage } from './hooks/useArticleStorage';
 import URLInput from './components/URLInput';
 import ArticleView from './components/ArticleView';
 import SavedArticles from './components/SavedArticles';
+import FileUpload from './components/FileUpload';
 
 // Demo article to showcase the app
 const DEMO_ARTICLE: Article = {
@@ -98,6 +99,30 @@ export default function App() {
     }
   };
 
+  const handleFileProcessed = async (content: string, title: string, fileName: string, fileType: string) => {
+    const wordCount = content.split(/\s+/).length;
+    const article: Article = {
+      id: 'file_' + Date.now(),
+      title: title,
+      content: content,
+      author: `Uploaded ${fileType.toUpperCase()}`,
+      date: new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' }),
+      readingTime: Math.ceil(wordCount / 200),
+      savedAt: Date.now(),
+      source: 'file',
+      fileName: fileName,
+      totalWords: wordCount,
+    };
+    setCurrentArticle(article);
+    setIsSaved(true);
+    // Save to IndexedDB
+    try {
+      await addArticle(article);
+    } catch (err) {
+      console.error('Error saving uploaded file:', err);
+    }
+  };
+
   const handleDeleteArticle = async (id: string) => {
     try {
       await removeArticle(id);
@@ -127,6 +152,51 @@ export default function App() {
         onSave={handleSaveArticle}
         isSaved={isSaved}
       />
+    );
+  }
+
+  if (currentTab === 'upload') {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
+        <header className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 px-4 py-4">
+          <div className="max-w-3xl mx-auto">
+            <button
+              onClick={() => setCurrentTab('home')}
+              className="text-sm text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 font-medium"
+            >
+              ← Back
+            </button>
+            <h1 className="text-xl font-bold text-gray-900 dark:text-white mt-2">Datei hochladen</h1>
+            <p className="text-sm text-gray-500 dark:text-gray-400">PDF, TXT, EPUB, MD → TTS Hörbuch</p>
+          </div>
+        </header>
+        <div className="max-w-3xl mx-auto px-4 py-6">
+          <FileUpload onFileProcessed={handleFileProcessed} />
+        </div>
+        <nav className="fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 z-40 safe-area-bottom">
+          <div className="max-w-3xl mx-auto flex">
+            {[
+              { id: 'home' as Tab, icon: BookOpen, label: 'Read' },
+              { id: 'saved' as Tab, icon: Bookmark, label: 'Library' },
+              { id: 'upload' as Tab, icon: Upload, label: 'Upload' },
+              { id: 'settings' as Tab, icon: Settings, label: 'Settings' },
+            ].map(({ id, icon: Icon, label }) => (
+              <button
+                key={id}
+                onClick={() => setCurrentTab(id)}
+                className={`flex-1 py-3 flex flex-col items-center gap-1 ${
+                  currentTab === id
+                    ? 'text-indigo-600 dark:text-indigo-400'
+                    : 'text-gray-400 dark:text-gray-500'
+                }`}
+              >
+                <Icon className="w-5 h-5" />
+                <span className="text-xs font-medium">{label}</span>
+              </button>
+            ))}
+          </div>
+        </nav>
+      </div>
     );
   }
 
@@ -269,6 +339,7 @@ export default function App() {
             { icon: Headphones, label: 'Text-to-Speech', color: 'text-purple-600 dark:text-purple-400' },
             { icon: Zap, label: 'Instant Parse', color: 'text-amber-600 dark:text-amber-400' },
             { icon: Bookmark, label: 'Offline Reading', color: 'text-emerald-600 dark:text-emerald-400' },
+            { icon: Upload, label: 'File Upload', color: 'text-rose-600 dark:text-rose-400' },
           ].map(({ icon: Icon, label, color }) => (
             <div
               key={label}
@@ -350,7 +421,7 @@ export default function App() {
             </div>
             <h3 className="font-semibold text-gray-900 dark:text-white mb-1">No saved articles yet</h3>
             <p className="text-sm text-gray-500 dark:text-gray-400 max-w-xs mx-auto">
-              Paste a URL above to fetch an article, then save it to your library for offline reading.
+              Paste a URL or upload a file (PDF, TXT, EPUB) to start reading and listening.
             </p>
           </div>
         )}
@@ -362,6 +433,7 @@ export default function App() {
           {[
             { id: 'home' as Tab, icon: BookOpen, label: 'Read' },
             { id: 'saved' as Tab, icon: Bookmark, label: 'Library' },
+            { id: 'upload' as Tab, icon: Upload, label: 'Upload' },
             { id: 'settings' as Tab, icon: Settings, label: 'Settings' },
           ].map(({ id, icon: Icon, label }) => (
             <button
