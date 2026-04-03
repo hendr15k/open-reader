@@ -18,6 +18,9 @@ export interface TTSState {
   currentSentence: number;
   speed: number;
   selectedVoice: string | null;
+  sentences: string[];
+  sleepTimerMinutes: number | null;
+  sleepTimerRemaining: number | null;
 }
 
 export type Tab = 'home' | 'saved' | 'upload' | 'settings';
