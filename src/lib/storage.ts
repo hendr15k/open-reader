@@ -1,8 +1,8 @@
 import { openDB, type IDBPDatabase } from 'idb';
-import type { Article } from './types';
+import type { Article, Bookmark } from './types';
 
 const DB_NAME = 'open-reader-db';
-const DB_VERSION = 2;
+const DB_VERSION = 3;
 
 let db: IDBPDatabase | null = null;
 
@@ -19,6 +19,11 @@ async function getDB(): Promise<IDBPDatabase> {
       if (oldVersion < 2) {
         if (!database.objectStoreNames.contains('files')) {
           database.createObjectStore('files', { keyPath: 'id' });
+        }
+      }
+      if (oldVersion < 3) {
+        if (!database.objectStoreNames.contains('bookmarks')) {
+          database.createObjectStore('bookmarks', { keyPath: 'id' });
         }
       }
     },
@@ -99,4 +104,30 @@ export async function isUrlSaved(url: string): Promise<boolean> {
   const database = await getDB();
   const article = await database.get('articles', url);
   return !!article;
+}
+
+// Bookmark functions
+export async function getAllBookmarks(): Promise<Bookmark[]> {
+  const database = await getDB();
+  return database.getAll('bookmarks');
+}
+
+export async function getBookmarksForArticle(articleId: string): Promise<Bookmark[]> {
+  const all = await getAllBookmarks();
+  return all.filter(b => b.articleId === articleId);
+}
+
+export async function addBookmark(bookmark: Bookmark): Promise<void> {
+  const database = await getDB();
+  await database.put('bookmarks', bookmark);
+}
+
+export async function removeBookmark(id: string): Promise<void> {
+  const database = await getDB();
+  await database.delete('bookmarks', id);
+}
+
+export async function getBookmarkCount(): Promise<number> {
+  const database = await getDB();
+  return (await database.getAllKeys('bookmarks')).length;
 }

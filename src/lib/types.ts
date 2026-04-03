@@ -25,6 +25,14 @@ export interface TTSState {
 
 export type Tab = 'home' | 'saved' | 'upload' | 'settings';
 
+export interface Bookmark {
+  id: string;
+  articleId: string;
+  sentenceIndex: number;
+  text: string;
+  createdAt: number;
+}
+
 export interface UploadedFile {
   id: string;
   fileName: string;
