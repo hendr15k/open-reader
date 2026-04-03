@@ -1,107 +1,54 @@
 # Open Reader
 
-Distraction-free article reader app with text-to-speech and offline storage. An ElevenReader-style alternative built with Capacitor, React, and TypeScript.
+**ElevenReader-Alternative** — PDF, TXT, EPUB zu Hörbuch mit TTS.
 
-Repo and folder name are now `open-reader`.
+Eine Open-Source-Text-zu-Sprache-App, die Dateien lokal vorliest und Artikel aus dem Web fetched.
 
 ## Features
 
-- 📖 **Article Fetching**: Fetch articles from any URL using Jina Reader
-- 🎧 **Text-to-Speech**: Full TTS playback with voice selection and speed control
-- 💾 **Offline Storage**: Save articles for offline reading using IndexedDB
-- 🌙 **Dark Mode**: Clean dark mode support
-- 📱 **Mobile-First**: Responsive design optimized for phones
-- 🚀 **Cross-Platform**: Web preview via GitHub Pages, Android build via Capacitor
+### 🎧 File Upload & TTS
+- **PDF** → Textextraktion via pdf.js (CDN, lazy-loaded)
+- **TXT/MD** → Direkter Import
+- **EPUB** → Text aus EPUB-ZIP extrahieren
+- **HTML** → Tags stripping für sauberen Text
+- Drag & Drop oder Klick
+- TTS: Play/Pause/Stop, Voice Selection, Speed Control
+
+### 📖 Article Fetching
+- URL einfügen → Jina Reader API → clean article view
+- Kein API-Key nötig
+
+### 💾 Offline & Library
+- IndexedDB: Artikel + Dateien lokal gespeichert
+- Reading Timer & Progress
+
+### 🌙 Dark Mode
+- System-Preference + manueller Toggle
+
+### 📱 Mobile-First
+- Responsive, Bottom Navigation, Capacitor-Ready
+- Android APK via GitHub Actions
 
 ## Tech Stack
 
-- **Frontend**: React 18 + TypeScript + Vite
-- **Styling**: TailwindCSS
-- **TTS**: Web Speech API
-- **Article Parsing**: Jina Reader
-- **Storage**: IndexedDB via idb
-- **Mobile**: Capacitor
+- React 18 + TypeScript + Vite
+- TailwindCSS
+- Web Speech API (TTS)
+- pdf.js (PDF extraction)
+- IndexedDB via idb
+- Capacitor (Android)
 
 ## Getting Started
 
-### Prerequisites
-
-- Node.js 18+
-- npm or yarn
-
-### Installation
-
 ```bash
-git clone https://github.com/hendr15k/open-reader.git
-cd open-reader
 npm install
+npm run dev        # Dev server
+npm run build      # Production build
+npm run android    # Build & open Android Studio
+npm run android:sync  # Sync only
 ```
 
-### Development
+## Screenshots & APK
 
-```bash
-npm run dev
-```
-
-### Build for Web
-
-```bash
-npm run build
-npm run preview
-```
-
-### Build for Android
-
-```bash
-npm run android:build
-```
-
-## Usage
-
-1. Enter a URL and fetch the article
-2. Read in the clean reading view
-3. Listen with the built-in TTS controls
-4. Save articles for offline access
-
-## Project Structure
-
-```text
-open-reader/
-├── src/
-│   ├── components/
-│   ├── hooks/
-│   ├── lib/
-│   │   ├── jina.ts
-│   │   ├── storage.ts
-│   │   └── types.ts
-│   ├── App.tsx
-│   └── main.tsx
-├── public/
-├── capacitor.config.ts
-└── package.json
-```
-
-## Deployment
-
-### GitHub Pages
-
-The app is deployed via GitHub Actions to GitHub Pages.
-
-### Android APK
-
-```bash
-npm run build
-npx cap sync android
-npx cap open android
-```
-
-Build the APK in Android Studio.
-
-## License
-
-MIT
-
-## Acknowledgments
-
-- Jina for article parsing
-- Capacitor for the hybrid app framework
+- **Web:** https://hendr15k.github.io/open-reader/
+- **APK:** Siehe [Releases](https://github.com/hendr15k/open-reader/releases)

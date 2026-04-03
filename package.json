@@ -1,7 +1,7 @@
 {
   "name": "open-reader",
-  "version": "1.0.0",
-  "description": "Distraction-free article reader app with TTS and offline storage",
+  "version": "2.0.0",
+  "description": "ElevenReader alternative - PDF, TXT, EPUB zu Hoerbuch mit TTS",
   "type": "module",
   "scripts": {
     "dev": "vite",
