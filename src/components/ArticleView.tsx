@@ -1,10 +1,12 @@
 import { useState, useEffect, useRef } from 'react';
 import {
   Play, Pause, Square, Save, ChevronLeft,
-  SkipBack, SkipForward, Moon, Timer, Maximize2, Minimize2, Bookmark
+  SkipBack, SkipForward, Moon, Timer, Maximize2, Minimize2, Bookmark, BookOpen
 } from 'lucide-react';
 import { Article } from '../lib/types';
 import { useTTS } from '../hooks/useTTS';
+import { useChapters } from '../hooks/useChapters';
+import ChapterSidebar from './ChapterSidebar';
 
 interface ArticleViewProps {
   article: Article;
@@ -33,6 +35,7 @@ const SPEED_OPTIONS = [0.5, 0.75, 1, 1.25, 1.5, 1.75, 2];
 
 export default function ArticleView({ article, onClose, onSave, isSaved }: ArticleViewProps) {
   const { state, voices, speak, pause, resume, stop, setSpeed, setVoice, setCurrentSentence, setSleepTimer, skipForward, skipBack } = useTTS();
+  const { chapters, activeChapter, setActiveChapter, showSidebar, setShowSidebar } = useChapters(article.content);
   const contentRef = useRef<HTMLDivElement>(null);
   const [fontSizeIndex, setFontSizeIndex] = useState(1);
   const [showSleepMenu, setShowSleepMenu] = useState(false);
@@ -42,24 +45,45 @@ export default function ArticleView({ article, onClose, onSave, isSaved }: Artic
   const [bookmarkedSentences, setBookmarked] = useState<Set<number>>(new Set());
   const [readingProgress, setReadingProgress] = useState(0);
 
-  useEffect(() => { speak(article.content); }, []);
+  // Get content for current chapter
+  const chapter = chapters[activeChapter];
+  const chapterContent = chapter
+    ? article.content.split('\n').slice(chapter.startLine, chapter.endLine).join('\n')
+    : article.content;
 
+  // Speak chapter content on mount or chapter change
+  useEffect(() => {
+    if (chapterContent && chapterContent.trim().length > 0) {
+      speak(chapterContent);
+    }
+  }, [activeChapter]);
+
+  // Track reading progress (overall = text progress within chapter + chapter position)
   useEffect(() => {
     const el = contentRef.current;
     if (!el) return;
+
     const handleScroll = () => {
       const { scrollTop, scrollHeight, clientHeight } = el;
-      const progress = scrollHeight > clientHeight ? (scrollTop / (scrollHeight - clientHeight)) * 100 : 100;
-      setReadingProgress(Math.min(100, Math.max(0, progress)));
+      const chapterProgress = scrollHeight > clientHeight ? (scrollTop / (scrollHeight - clientHeight)) * 100 : 100;
+      const overallProgress = ((activeChapter + chapterProgress / 100) / chapters.length) * 100;
+      setReadingProgress(Math.min(100, Math.max(0, overallProgress)));
     };
+
+    el.addEventListener('scroll', handleScroll);
     el.addEventListener('scroll', handleScroll);
     return () => el.removeEventListener('scroll', handleScroll);
-  }, []);
+  }, [chapter, activeChapter, chapters.length]);
+
+  // Scroll to top when chapter changes
+  useEffect(() => {
+    contentRef.current?.scrollTo({ top: 0 });
+  }, [activeChapter]);
 
   const handlePlay = () => {
     if (state.isPlaying) pause();
     else if (state.isPaused) resume();
-    else speak(article.content, state.currentSentence);
+    else speak(chapterContent);
   };
 
   const handleStop = () => { stop(); };
@@ -91,12 +115,22 @@ export default function ArticleView({ article, onClose, onSave, isSaved }: Artic
         <button onClick={onClose} className="w-10 h-10 rounded-xl flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-800">
           <ChevronLeft className="w-6 h-6 text-gray-700 dark:text-gray-300" />
         </button>
+
         <div className="flex items-center gap-2">
           {state.sleepTimerRemaining !== null && (
             <div className="flex items-center gap-1 px-2 py-1 bg-indigo-100 dark:bg-indigo-900/50 rounded-full">
               <Timer className="w-3 h-3 text-indigo-600 dark:text-indigo-400" />
               <span className="text-xs font-medium text-indigo-600 dark:text-indigo-400 tabular-nums">{formatTime(state.sleepTimerRemaining)}</span>
             </div>
+          )}
+          {chapters.length > 1 && (
+            <button
+              onClick={() => setShowSidebar(true)}
+              className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-800"
+              title="Kapitel navigieren"
+            >
+              <BookOpen className="w-4 h-4 text-gray-500 dark:text-gray-400" />
+            </button>
           )}
           <span className="text-xs tabular-nums text-gray-500 dark:text-gray-400">{progressPct}%</span>
           {bookmarkedSentences.size > 0 && <span className="text-xs text-amber-600 dark:text-amber-400 font-medium">{bookmarkedSentences.size} 🔖</span>}
@@ -127,6 +161,30 @@ export default function ArticleView({ article, onClose, onSave, isSaved }: Artic
               </div>
             </header>
           )}
+
+          {/* Chapter indicator */}
+          {chapters.length > 1 && !immersiveMode && (
+            <div className="mb-4 flex items-center justify-between">
+              <button
+                onClick={() => activeChapter > 0 && setActiveChapter(activeChapter - 1)}
+                disabled={activeChapter === 0}
+                className="text-xs text-gray-500 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+              >
+                ← Kapitel {activeChapter}
+              </button>
+              <span className="text-xs text-indigo-600 dark:text-indigo-400 font-medium">
+                {chapter?.title}
+              </span>
+              <button
+                onClick={() => activeChapter < chapters.length - 1 && setActiveChapter(activeChapter + 1)}
+                disabled={activeChapter === chapters.length - 1}
+                className="text-xs text-gray-500 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+              >
+                Kapitel {activeChapter + 2} →
+              </button>
+            </div>
+          )}
+
           <div className={`prose dark:prose-invert max-w-none ${currentFontClass}`}>
             {state.sentences.length > 0 ? (
               state.sentences.map((sentence, idx) => {
@@ -156,7 +214,7 @@ export default function ArticleView({ article, onClose, onSave, isSaved }: Artic
                 );
               })
             ) : (
-              article.content.split('\n').map((paragraph, idx) => {
+              chapterContent.split('\n').map((paragraph, idx) => {
                 const trimmed = paragraph.trim();
                 if (!trimmed) return <div key={idx} className="h-4" />;
                 return <p key={idx} className={`${sleepMode ? 'text-gray-500' : 'text-gray-700 dark:text-gray-300'} leading-relaxed mb-5`}>{trimmed}</p>;
@@ -195,6 +253,16 @@ export default function ArticleView({ article, onClose, onSave, isSaved }: Artic
           <select value={state.selectedVoice || ''} onChange={(e) => setVoice(e.target.value)} className={`px-3 py-2 rounded-xl ${sleepMode ? 'bg-gray-800 text-gray-400' : 'bg-gray-100/80 dark:bg-gray-800/80 text-gray-700 dark:text-gray-300'} text-xs font-medium border border-gray-200/50 dark:border-gray-700/50 max-w-32 truncate`}><option value="">Stimme</option>{voices.filter(v => v.lang.startsWith('de')).slice(0, 3).map(v => <option key={v.name} value={v.name}>{v.name.split(' ')[0]}</option>)}{voices.filter(v => !v.lang.startsWith('de')).slice(0, 3).map(v => <option key={v.name} value={v.name}>{v.name.split(' ')[0]}</option>)}</select>
         </div>
       </div>
+
+      {/* Chapter Sidebar Overlay */}
+      {showSidebar && (
+        <ChapterSidebar
+          chapters={chapters}
+          activeChapter={activeChapter}
+          onSelect={setActiveChapter}
+          onClose={() => setShowSidebar(false)}
+        />
+      )}
     </div>
   );
 }
