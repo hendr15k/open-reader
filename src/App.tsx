@@ -3,10 +3,19 @@ import { BookOpen, Bookmark, Settings, Moon, Sun, Rss, Zap, Headphones, Upload }
 import { Article, Tab } from './lib/types';
 import { fetchArticle } from './lib/jina';
 import { useArticleStorage } from './hooks/useArticleStorage';
+import { epubDB } from './lib/epubDB';
 import URLInput from './components/URLInput';
 import ArticleView from './components/ArticleView';
 import SavedArticles from './components/SavedArticles';
 import FileUpload from './components/FileUpload';
+import EpubReader from './components/EpubReader';
+import EpubUpload from './components/EpubUpload';
+
+interface EpubEntry {
+  id: number;
+  title: string;
+  author?: string;
+}
 
 // Demo article to showcase the app
 const DEMO_ARTICLE: Article = {
@@ -40,6 +49,9 @@ export default function App() {
   const [currentTab, setCurrentTab] = useState<Tab>('home');
   const [currentArticle, setCurrentArticle] = useState<Article | null>(null);
   const [isSaved, setIsSaved] = useState(false);
+  const [epubReader, setEpubReader] = useState<EpubEntry | null>(null);
+  const [epubUpload, setEpubUpload] = useState(false);
+  const [_, setEpubLibrary] = useState<EpubEntry[]>([]);
   const [darkMode, setDarkMode] = useState(() => {
     if (typeof window !== 'undefined') {
       return window.matchMedia('(prefers-color-scheme: dark)').matches;
@@ -50,6 +62,15 @@ export default function App() {
   const { articles, loading, addArticle, removeArticle, checkSaved, reload } = useArticleStorage();
   const [fetching, setFetching] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Load EPUB library
+  useEffect(() => {
+    const load = async () => {
+      const files = await epubDB.getAllFiles();
+      setEpubLibrary(files.map(f => ({ id: f.id, title: f.title, author: f.author })));
+    };
+    load();
+  }, []);
 
   // Apply dark mode
   useEffect(() => {
@@ -139,6 +160,71 @@ export default function App() {
     setCurrentArticle(DEMO_ARTICLE);
     setIsSaved(false);
   };
+
+  // EPUB Upload handler
+  const handleEpubUploaded = async (fileId: number, title: string) => {
+    setEpubUpload(false);
+    const files = await epubDB.getAllFiles();
+    setEpubLibrary(files.map(f => ({ id: f.id, title: f.title, author: f.author })));
+    setEpubReader({ id: fileId, title });
+  };
+
+  // EPUB Reader view
+  if (epubReader) {
+    return (
+      <EpubReader
+        fileId={epubReader.id}
+        title={epubReader.title}
+        author={epubReader.author}
+        onClose={() => setEpubReader(null)}
+      />
+    );
+  }
+
+  // EPUB Upload view
+  if (epubUpload) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
+        <header className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 px-4 py-4">
+          <div className="max-w-3xl mx-auto">
+            <button
+              onClick={() => setEpubUpload(false)}
+              className="text-sm text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 font-medium"
+            >
+              ← Back
+            </button>
+            <h1 className="text-xl font-bold text-gray-900 dark:text-white mt-2">EPUB hochladen</h1>
+          </div>
+        </header>
+        <div className="max-w-3xl mx-auto px-4 py-6">
+          <EpubUpload onUploadComplete={handleEpubUploaded} onCancel={() => setEpubUpload(false)} />
+        </div>
+        <nav className="fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 z-40 safe-area-bottom">
+          <div className="max-w-3xl mx-auto flex">
+            {[
+              { id: 'home' as Tab, icon: BookOpen, label: 'Read' },
+              { id: 'saved' as Tab, icon: Bookmark, label: 'Library' },
+              { id: 'upload' as Tab, icon: Upload, label: 'Upload' },
+              { id: 'settings' as Tab, icon: Settings, label: 'Settings' },
+            ].map(({ id, icon: Icon, label }) => (
+              <button
+                key={id}
+                onClick={() => setCurrentTab(id)}
+                className={`flex-1 py-3 flex flex-col items-center gap-1 ${
+                  currentTab === id
+                    ? 'text-indigo-600 dark:text-indigo-400'
+                    : 'text-gray-400 dark:text-gray-500'
+                }`}
+              >
+                <Icon className="w-5 h-5" />
+                <span className="text-xs font-medium">{label}</span>
+              </button>
+            ))}
+          </div>
+        </nav>
+      </div>
+    );
+  }
 
   // Render article view
   if (currentArticle) {
