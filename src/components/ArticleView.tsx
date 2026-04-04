@@ -71,7 +71,6 @@ export default function ArticleView({ article, onClose, onSave, isSaved }: Artic
     };
 
     el.addEventListener('scroll', handleScroll);
-    el.addEventListener('scroll', handleScroll);
     return () => el.removeEventListener('scroll', handleScroll);
   }, [chapter, activeChapter, chapters.length]);
 
