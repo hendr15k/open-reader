@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, lazy, Suspense } from 'react';
 import { BookOpen, Bookmark, Settings, Moon, Sun, Rss, Zap, Headphones, Upload } from 'lucide-react';
 import { Article, Tab } from './lib/types';
 import { fetchArticle } from './lib/jina';
@@ -8,8 +8,8 @@ import URLInput from './components/URLInput';
 import ArticleView from './components/ArticleView';
 import SavedArticles from './components/SavedArticles';
 import FileUpload from './components/FileUpload';
-import EpubReader from './components/EpubReader';
-import EpubUpload from './components/EpubUpload';
+const EpubReader = lazy(() => import('./components/EpubReader'));
+const EpubUpload = lazy(() => import('./components/EpubUpload'));
 
 interface EpubEntry {
   id: number;
@@ -172,18 +172,21 @@ export default function App() {
   // EPUB Reader view
   if (epubReader) {
     return (
-      <EpubReader
-        fileId={epubReader.id}
-        title={epubReader.title}
-        author={epubReader.author}
-        onClose={() => setEpubReader(null)}
-      />
+      <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><p className="text-gray-500">Loading EPUB Reader...</p></div>}>
+        <EpubReader
+          fileId={epubReader.id}
+          title={epubReader.title}
+          author={epubReader.author}
+          onClose={() => setEpubReader(null)}
+        />
+      </Suspense>
     );
   }
 
   // EPUB Upload view
   if (epubUpload) {
     return (
+      <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><p className="text-gray-500">Loading EPUB Upload...</p></div>}>
       <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
         <header className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 px-4 py-4">
           <div className="max-w-3xl mx-auto">
@@ -223,6 +226,7 @@ export default function App() {
           </div>
         </nav>
       </div>
+      </Suspense>
     );
   }
 
