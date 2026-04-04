@@ -10,6 +10,7 @@ import SavedArticles from './components/SavedArticles';
 import FileUpload from './components/FileUpload';
 const EpubReader = lazy(() => import('./components/EpubReader'));
 const EpubUpload = lazy(() => import('./components/EpubUpload'));
+const EpubLibrary = lazy(() => import('./components/EpubLibrary'));
 
 interface EpubEntry {
   id: number;
@@ -51,7 +52,8 @@ export default function App() {
   const [isSaved, setIsSaved] = useState(false);
   const [epubReader, setEpubReader] = useState<EpubEntry | null>(null);
   const [epubUpload, setEpubUpload] = useState(false);
-  const [_, setEpubLibrary] = useState<EpubEntry[]>([]);
+  const [epubLibraryView, setEpubLibraryView] = useState(false);
+  const [_, setEpubLibraryList] = useState<EpubEntry[]>([]);
   const [darkMode, setDarkMode] = useState(() => {
     if (typeof window !== 'undefined') {
       return window.matchMedia('(prefers-color-scheme: dark)').matches;
@@ -67,7 +69,7 @@ export default function App() {
   useEffect(() => {
     const load = async () => {
       const files = await epubDB.getAllFiles();
-      setEpubLibrary(files.map(f => ({ id: f.id, title: f.title, author: f.author })));
+      setEpubLibraryList(files.map(f => ({ id: f.id, title: f.title, author: f.author })));
     };
     load();
   }, []);
@@ -164,8 +166,9 @@ export default function App() {
   // EPUB Upload handler
   const handleEpubUploaded = async (fileId: number, title: string) => {
     setEpubUpload(false);
+    setEpubLibraryView(false);
     const files = await epubDB.getAllFiles();
-    setEpubLibrary(files.map(f => ({ id: f.id, title: f.title, author: f.author })));
+    setEpubLibraryList(files.map(f => ({ id: f.id, title: f.title, author: f.author })));
     setEpubReader({ id: fileId, title });
   };
 
@@ -178,6 +181,18 @@ export default function App() {
           title={epubReader.title}
           author={epubReader.author}
           onClose={() => setEpubReader(null)}
+        />
+      </Suspense>
+    );
+  }
+
+  // EPUB Library view
+  if (epubLibraryView) {
+    return (
+      <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><p className="text-gray-500">Loading EPUB Library...</p></div>}>
+        <EpubLibrary
+          onOpenEpub={(id, title) => setEpubReader({ id, title })}
+          onBack={() => setEpubLibraryView(false)}
         />
       </Suspense>
     );
@@ -260,7 +275,23 @@ export default function App() {
             <p className="text-sm text-gray-500 dark:text-gray-400">PDF, TXT, EPUB, MD → TTS Hörbuch</p>
           </div>
         </header>
-        <div className="max-w-3xl mx-auto px-4 py-6">
+        <div className="max-w-3xl mx-auto px-4 py-6 space-y-4">
+          {/* EPUB Library Button */}
+          <button
+            onClick={() => setEpubLibraryView(true)}
+            className="w-full bg-gradient-to-r from-emerald-500 to-teal-600 rounded-xl p-5 text-left shadow-lg shadow-emerald-500/10 hover:shadow-xl transition-shadow"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center">
+                <BookOpen className="w-6 h-6 text-white" />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-white">EPUB Bibliothek</h3>
+                <p className="text-sm text-white/80">Deine hochgeladenen EPUBs ansehen und lesen</p>
+              </div>
+            </div>
+          </button>
+
           <FileUpload onFileProcessed={handleFileProcessed} />
         </div>
         <nav className="fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 z-40 safe-area-bottom">
