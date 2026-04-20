@@ -24,12 +24,8 @@ export function parseChapters(content: string): ContentParser {
   let charOffset = 0;
   let chapterStartOffset = 0;
 
-  // Regex patterns for headings
-  const headingPatterns = [
-    /^(#{1,6})\s+(.+)$/m,           // Markdown headings
-    /^\s*(Chapter|Kapitel)\s+(\d+|[IVXLCDM]+)[.\s]*(.+)$/im,  // "Chapter 1" / "Kapitel 1"
-    /^\s*Part\s+(\d+|[IVXLCDM]+)[.\s]*(.+)$/im,  // "Part 1"
-  ];
+  // Combined regex pattern for headings to optimize matching performance
+  const headingPattern = /^(?:#{1,6}\s+.+|\s*(?:Chapter|Kapitel|Part)\s+(?:\d+|[IVXLCDM]+)[.\s]*.+)$/i;
 
   let isFirstChapter = true;
   let currentChapterContent = '';
@@ -38,25 +34,22 @@ export function parseChapters(content: string): ContentParser {
     const line = lines[i];
     let matched = false;
 
-    for (const pattern of headingPatterns) {
-      const match = line.match(pattern);
-      if (match) {
-        if (!isFirstChapter && currentChapter) {
-          currentChapter.length = charOffset - chapterStartOffset;
-          chapters.push(currentChapter);
-        }
-        const title = match[0].replace(/^#+\s*/, '').trim();
-        currentChapter = {
-          id: chapters.length,
-          title: title || `Kapitel ${chapters.length + 1}`,
-          offset: charOffset,
-          length: 0,
-        };
-        chapterStartOffset = charOffset;
-        isFirstChapter = false;
-        matched = true;
-        break;
+    const match = line.match(headingPattern);
+    if (match) {
+      if (!isFirstChapter && currentChapter) {
+        currentChapter.length = charOffset - chapterStartOffset;
+        chapters.push(currentChapter);
       }
+      const title = match[0].replace(/^#+\s*/, '').trim();
+      currentChapter = {
+        id: chapters.length,
+        title: title || `Kapitel ${chapters.length + 1}`,
+        offset: charOffset,
+        length: 0,
+      };
+      chapterStartOffset = charOffset;
+      isFirstChapter = false;
+      matched = true;
     }
 
     if (!matched) {
