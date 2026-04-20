@@ -14,7 +14,6 @@ export function useTTS() {
   });
 
   const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
-  const voicesRef = useRef<SpeechSynthesisVoice[]>([]);
   const sleepTimerRef = useRef<NodeJS.Timeout | null>(null);
   const sleepTickRef = useRef<NodeJS.Timeout | null>(null);
   const _articleTitle = useRef<string>('');
@@ -28,11 +27,6 @@ export function useTTS() {
     speechSynthesis.onvoiceschanged = loadVoices;
     return () => { speechSynthesis.cancel(); };
   }, []);
-
-  // Keep ref in sync with state
-  useEffect(() => {
-    voicesRef.current = voices;
-  }, [voices]);
 
   // MediaSession API - Background Audio
   useEffect(() => {
@@ -80,29 +74,6 @@ export function useTTS() {
     }
   }, []);
 
-  const _speakFromSentence = useCallback((fromIndex: number) => {
-    if (state.sentences.length === 0) return;
-    const idx = Math.max(0, Math.min(fromIndex, state.sentences.length - 1));
-    const remaining = state.sentences.slice(idx).join(' ');
-    speechSynthesis.cancel();
-    const u = new SpeechSynthesisUtterance(remaining);
-    const v = voicesRef.current.find(v => v.name === state.selectedVoice);
-    if (v) u.voice = v;
-    u.rate = state.speed;
-    u.onend = () => {
-      setState(prev => ({ ...prev, isPlaying: false, isPaused: false }));
-      _updatePlaybackState(false, false);
-      if (sleepTimerRef.current) clearTimeout(sleepTimerRef.current);
-      if (sleepTickRef.current) clearInterval(sleepTickRef.current);
-    };
-    u.onerror = () => {
-      setState(prev => ({ ...prev, isPlaying: false, isPaused: false }));
-      _updatePlaybackState(false, false);
-    };
-    speechSynthesis.speak(u);
-    _updatePlaybackState(true, false);
-  }, [state.sentences, state.selectedVoice, state.speed, _updatePlaybackState]);
-
   const speak = useCallback((text: string, startIndex?: number) => {
     speechSynthesis.cancel();
 
@@ -122,7 +93,7 @@ export function useTTS() {
     const remainingText = sentences.slice(startIdx).join(' ');
     const utterance = new SpeechSynthesisUtterance(remainingText);
 
-    const voice = voicesRef.current.find(v => v.name === state.selectedVoice);
+    const voice = voices.find(v => v.name === state.selectedVoice);
     if (voice) utterance.voice = voice;
     utterance.rate = state.speed;
 
@@ -140,7 +111,7 @@ export function useTTS() {
 
     speechSynthesis.speak(utterance);
     _updatePlaybackState(true, false);
-  }, [state.speed, state.selectedVoice, _updatePlaybackState]);
+  }, [voices, state.speed, state.selectedVoice, _updatePlaybackState]);
 
   const pause = useCallback(() => {
     speechSynthesis.pause();
@@ -176,15 +147,30 @@ export function useTTS() {
 
   const skipForward = useCallback(() => {
     const next = Math.min(state.currentSentence + 1, state.sentences.length - 1);
-    setState(prev => ({ ...prev, currentSentence: next }));
-    _speakFromSentence(next);
-  }, [state.currentSentence, state.sentences.length, _speakFromSentence]);
+    setCurrentSentence(next);
+    const remaining = state.sentences.slice(next).join(' ');
+    speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(remaining);
+    const voice = voices.find(v => v.name === state.selectedVoice);
+    if (voice) u.voice = voice;
+    u.rate = state.speed;
+    u.onend = () => { setState(p => ({ ...p, isPlaying: false, isPaused: false })); _updatePlaybackState(false, false); };
+    speechSynthesis.speak(u);
+    _updatePlaybackState(true, false);
+  }, [state.currentSentence, state.sentences, state.selectedVoice, state.speed, voices, setCurrentSentence, _updatePlaybackState]);
 
   const skipBack = useCallback(() => {
-    const newIdx = Math.max(state.currentSentence - 1, 0);
-    setState(prev => ({ ...prev, currentSentence: newIdx }));
-    _speakFromSentence(newIdx);
-  }, [state.currentSentence, _speakFromSentence]);
+    const prev = Math.max(state.currentSentence - 1, 0);
+    setCurrentSentence(prev);
+    const remaining = state.sentences.slice(prev).join(' ');
+    speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(remaining);
+    const voice = voices.find(v => v.name === state.selectedVoice);
+    if (voice) u.voice = voice;
+    u.rate = state.speed;
+    speechSynthesis.speak(u);
+    _updatePlaybackState(true, false);
+  }, [state.currentSentence, state.sentences, state.selectedVoice, state.speed, voices, setCurrentSentence, _updatePlaybackState]);
 
   const setSleepTimer = useCallback((minutes: number | null) => {
     if (sleepTimerRef.current) clearTimeout(sleepTimerRef.current);
