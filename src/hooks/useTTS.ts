@@ -1,11 +1,11 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { TTSState } from '../lib/types';
 
-export function useTTS() {
+export function useTTS(initialSentence: number = 0) {
   const [state, setState] = useState<TTSState>({
     isPlaying: false,
     isPaused: false,
-    currentSentence: 0,
+    currentSentence: initialSentence,
     speed: 1,
     selectedVoice: null,
     sentences: [],

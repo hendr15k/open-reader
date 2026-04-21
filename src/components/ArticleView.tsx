@@ -34,7 +34,7 @@ const SLEEP_OPTIONS = [
 const SPEED_OPTIONS = [0.5, 0.75, 1, 1.25, 1.5, 1.75, 2];
 
 export default function ArticleView({ article, onClose, onSave, isSaved }: ArticleViewProps) {
-  const { state, voices, speak, pause, resume, stop, setSpeed, setVoice, setCurrentSentence, setSleepTimer, skipForward, skipBack } = useTTS();
+  const { state, voices, speak, pause, resume, stop, setSpeed, setVoice, setCurrentSentence, setSleepTimer, skipForward, skipBack } = useTTS(parseInt(localStorage.getItem(`open-reader-progress-${article.id}`) || '0', 10));
   const { chapters, activeChapter, setActiveChapter, showSidebar, setShowSidebar } = useChapters(article.content);
   const contentRef = useRef<HTMLDivElement>(null);
   const [fontSizeIndex, setFontSizeIndex] = useState(() => {
@@ -54,12 +54,41 @@ export default function ArticleView({ article, onClose, onSave, isSaved }: Artic
     ? article.content.split('\n').slice(chapter.startLine, chapter.endLine).join('\n')
     : article.content;
 
+  // Restore reading progress on mount
+  useEffect(() => {
+    const saved = localStorage.getItem(`open-reader-progress-${article.id}`);
+    if (saved) {
+      const savedIdx = parseInt(saved, 10);
+      if (!isNaN(savedIdx) && savedIdx > 0) {
+        setCurrentSentence(savedIdx);
+      }
+    }
+  }, []);
+
   // Speak chapter content on mount or chapter change
   useEffect(() => {
     if (chapterContent && chapterContent.trim().length > 0) {
       speak(chapterContent);
     }
   }, [activeChapter]);
+
+  // Save reading progress on meaningful updates
+  useEffect(() => {
+    const saveProgress = () => {
+      localStorage.setItem(`open-reader-progress-${article.id}`, String(state.currentSentence));
+    };
+    // Throttle: only save when sentence changes significantly
+    const interval = setInterval(saveProgress, 5000);
+    return () => clearInterval(interval);
+  }, [article.id, state.currentSentence]);
+
+
+  // Also save when pausing/stopping
+  useEffect(() => {
+    if (!state.isPlaying && !state.isPaused) {
+      localStorage.setItem(`open-reader-progress-${article.id}`, String(state.currentSentence));
+    }
+  }, [state.isPlaying, state.isPaused, state.currentSentence, article.id]);
 
   // Track reading progress (overall = text progress within chapter + chapter position)
   useEffect(() => {
