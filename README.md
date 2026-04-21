@@ -51,4 +51,17 @@ npm run android:sync  # Sync only
 ## Screenshots & APK
 
 - **Web:** https://hendr15k.github.io/open-reader/
-- **APK:** Siehe [Releases](https://github.com/hendr15k/open-reader/releases)
+- **APK / Nightly:** [GitHub Releases](https://github.com/hendr15k/open-reader/releases)
+- **Workflow-Artefakte:** [GitHub Actions](https://github.com/hendr15k/open-reader/actions) → letzter erfolgreicher Run → Artifact `open-reader-apks`
+
+### Android Builds
+
+Bei jedem Push auf `main` wird automatisch:
+- die Web-App gebaut
+- Capacitor Android synchronisiert
+- ein **Debug-APK** erstellt
+- ein **Release-APK** erstellt
+- ein Nightly-Release aktualisiert
+- das Artifact **`open-reader-apks`** hochgeladen
+
+Wenn Signatur-Secrets gesetzt sind, wird das Release-APK zusätzlich signiert.
