@@ -56,6 +56,8 @@ export default function App() {
   const [_, setEpubLibraryList] = useState<EpubEntry[]>([]);
   const [darkMode, setDarkMode] = useState(() => {
     if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('open-reader-dark-mode');
+      if (saved !== null) return saved === 'true';
       return window.matchMedia('(prefers-color-scheme: dark)').matches;
     }
     return false;
@@ -82,6 +84,9 @@ export default function App() {
       } else {
         document.documentElement.classList.remove('dark');
       }
+    }
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('open-reader-dark-mode', String(darkMode));
     }
   }, [darkMode]);
 
