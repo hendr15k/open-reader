@@ -2,6 +2,15 @@ import { useState, useMemo } from 'react';
 import { Trash2, Bookmark, Search, Grid, List, FileText, Globe, SortAsc, SortDesc } from 'lucide-react';
 import { Article } from '../lib/types';
 
+function hasSavedProgress(articleId: string): boolean {
+  try {
+    const saved = localStorage.getItem(`open-reader-progress-${articleId}`);
+    if (!saved) return false;
+    const idx = parseInt(saved, 10);
+    return !isNaN(idx) && idx > 0;
+  } catch { return false; }
+}
+
 interface SavedArticlesProps {
   articles: Article[];
   loading: boolean;
@@ -161,14 +170,17 @@ export default function SavedArticles({
                   </div>
 
                   {/* Meta */}
-                  <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+                  <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400 flex-wrap">
                     {article.source === 'file' ? (
                       <span className="flex items-center gap-0.5 text-emerald-600 dark:text-emerald-400"><FileText className="w-3 h-3" />{article.fileName?.split('.').pop()?.toUpperCase()}</span>
                     ) : (
                       <span className="flex items-center gap-0.5 text-indigo-600 dark:text-indigo-400"><Globe className="w-3 h-3" />Web</span>
                     )}
                     {article.readingTime && <span>{article.readingTime} min</span>}
+                    {(() => { const hasProgress = hasSavedProgress(article.id); return hasProgress ? <span className="text-indigo-500 font-medium">Fortsetzen</span> : null; })()}
                   </div>
+                  {(() => { const hasProgress = hasSavedProgress(article.id); return hasProgress ? (
+                    <div className="mt-2 text-[11px] text-indigo-500 dark:text-indigo-400">Zuletzt gelesene Position gespeichert</div> ) : null; })()}
                 </div>
               </div>
             ))}
