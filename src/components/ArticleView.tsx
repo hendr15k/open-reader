@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import {
   Play, Pause, Square, Save, ChevronLeft,
   SkipBack, SkipForward, Moon, Timer, Maximize2, Minimize2, Bookmark, BookOpen
@@ -6,6 +6,8 @@ import {
 import { Article } from '../lib/types';
 import { useTTS } from '../hooks/useTTS';
 import { useChapters } from '../hooks/useChapters';
+import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
+import { useToast } from '../hooks/useToast';
 import ChapterSidebar from './ChapterSidebar';
 
 interface ArticleViewProps {
@@ -53,6 +55,21 @@ export default function ArticleView({ article, onClose, onSave, isSaved }: Artic
     return new Set();
   });
   const [readingProgress, setReadingProgress] = useState(0);
+  const [showShortcutsHint, setShowShortcutsHint] = useState(false);
+  const { toasts, showToast } = useToast(1500);
+
+  // Speed step through SPEED_OPTIONS
+  const cycleSpeed = useCallback((direction: 1 | -1) => {
+    const currentIdx = SPEED_OPTIONS.indexOf(state.speed);
+    const nextIdx = Math.max(0, Math.min(SPEED_OPTIONS.length - 1, currentIdx + direction));
+    if (nextIdx !== currentIdx) {
+      setSpeed(SPEED_OPTIONS[nextIdx]);
+      showToast(`Speed: ${SPEED_OPTIONS[nextIdx]}x`);
+    }
+  }, [state.speed, setSpeed, showToast]);
+
+  const handleIncreaseSpeed = useCallback(() => cycleSpeed(1), [cycleSpeed]);
+  const handleDecreaseSpeed = useCallback(() => cycleSpeed(-1), [cycleSpeed]);
 
   // Get content for current chapter
   const chapter = chapters[activeChapter];
@@ -124,6 +141,16 @@ export default function ArticleView({ article, onClose, onSave, isSaved }: Artic
   };
 
   const handleStop = () => { stop(); };
+
+  // Keyboard shortcuts
+  useKeyboardShortcuts({
+    onTogglePlayPause: handlePlay,
+    onNextSentence: skipForward,
+    onPrevSentence: skipBack,
+    onIncreaseSpeed: handleIncreaseSpeed,
+    onDecreaseSpeed: handleDecreaseSpeed,
+    onShowHelp: () => setShowShortcutsHint(prev => !prev),
+  });
 
   const toggleBookmark = (idx: number) => {
     const nb = new Set(bookmarkedSentences);
@@ -314,6 +341,67 @@ export default function ArticleView({ article, onClose, onSave, isSaved }: Artic
           onSelect={setActiveChapter}
           onClose={() => setShowSidebar(false)}
         />
+      )}
+
+      {/* Toast Notifications */}
+      {toasts.length > 0 && (
+        <div className="fixed top-16 left-1/2 -translate-x-1/2 z-[60] flex flex-col items-center gap-2">
+          {toasts.map(t => (
+            <div
+              key={t.id}
+              className="px-4 py-2 bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 rounded-xl text-sm font-medium shadow-lg animate-fade-in"
+            >
+              {t.message}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Keyboard Shortcuts Hint Overlay */}
+      {showShortcutsHint && (
+        <div
+          className="fixed inset-0 z-[70] flex items-center justify-center bg-black/40"
+          onClick={() => setShowShortcutsHint(false)}
+        >
+          <div
+            className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 p-6 max-w-xs w-full mx-4"
+            onClick={e => e.stopPropagation()}
+          >
+            <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4">Keyboard Shortcuts</h3>
+            <div className="space-y-3 text-sm">
+              <div className="flex items-center justify-between">
+                <span className="text-gray-600 dark:text-gray-400">Play / Pause</span>
+                <kbd className="px-2 py-1 bg-gray-100 dark:bg-gray-800 rounded-md text-xs font-mono text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-700">Space</kbd>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-gray-600 dark:text-gray-400">Next sentence</span>
+                <kbd className="px-2 py-1 bg-gray-100 dark:bg-gray-800 rounded-md text-xs font-mono text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-700">→</kbd>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-gray-600 dark:text-gray-400">Previous sentence</span>
+                <kbd className="px-2 py-1 bg-gray-100 dark:bg-gray-800 rounded-md text-xs font-mono text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-700">←</kbd>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-gray-600 dark:text-gray-400">Increase speed</span>
+                <kbd className="px-2 py-1 bg-gray-100 dark:bg-gray-800 rounded-md text-xs font-mono text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-700">↑</kbd>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-gray-600 dark:text-gray-400">Decrease speed</span>
+                <kbd className="px-2 py-1 bg-gray-100 dark:bg-gray-800 rounded-md text-xs font-mono text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-700">↓</kbd>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-gray-600 dark:text-gray-400">Show this help</span>
+                <kbd className="px-2 py-1 bg-gray-100 dark:bg-gray-800 rounded-md text-xs font-mono text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-700">?</kbd>
+              </div>
+            </div>
+            <button
+              onClick={() => setShowShortcutsHint(false)}
+              className="mt-5 w-full py-2 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-xl text-sm font-medium text-gray-700 dark:text-gray-300 transition-colors"
+            >
+              Close
+            </button>
+          </div>
+        </div>
       )}
     </div>
   );
