@@ -37,11 +37,14 @@ export default function ArticleView({ article, onClose, onSave, isSaved }: Artic
   const { state, voices, speak, pause, resume, stop, setSpeed, setVoice, setCurrentSentence, setSleepTimer, skipForward, skipBack } = useTTS();
   const { chapters, activeChapter, setActiveChapter, showSidebar, setShowSidebar } = useChapters(article.content);
   const contentRef = useRef<HTMLDivElement>(null);
-  const [fontSizeIndex, setFontSizeIndex] = useState(1);
+  const [fontSizeIndex, setFontSizeIndex] = useState(() => {
+    const saved = localStorage.getItem('open-reader-font-size');
+    return saved ? parseInt(saved, 10) : 1;
+  });
   const [showSleepMenu, setShowSleepMenu] = useState(false);
   const [showSpeedMenu, setShowSpeedMenu] = useState(false);
-  const [sleepMode, setSleepMode] = useState(false);
-  const [immersiveMode, setImmersiveMode] = useState(false);
+  const [sleepMode, setSleepMode] = useState(() => localStorage.getItem('open-reader-sleep-mode') === 'true');
+  const [immersiveMode, setImmersiveMode] = useState(() => localStorage.getItem('open-reader-immersive') === 'true');
   const [bookmarkedSentences, setBookmarked] = useState<Set<number>>(new Set());
   const [readingProgress, setReadingProgress] = useState(0);
 
@@ -93,8 +96,18 @@ export default function ArticleView({ article, onClose, onSave, isSaved }: Artic
     setBookmarked(nb);
   };
 
-  const toggleSleepMode = () => setSleepMode(!sleepMode);
-  const toggleImmersive = () => setImmersiveMode(!immersiveMode);
+  const toggleSleepMode = () => {
+    setSleepMode(prev => {
+      localStorage.setItem('open-reader-sleep-mode', String(!prev));
+      return !prev;
+    });
+  };
+  const toggleImmersive = () => {
+    setImmersiveMode(prev => {
+      localStorage.setItem('open-reader-immersive', String(!prev));
+      return !prev;
+    });
+  };
 
   const formatTime = (totalSeconds: number) => {
     const m = Math.floor(totalSeconds / 60);
@@ -104,6 +117,10 @@ export default function ArticleView({ article, onClose, onSave, isSaved }: Artic
 
   const textProgress = state.sentences.length > 0 ? Math.round((state.currentSentence / state.sentences.length) * 100) : 0;
   const progressPct = Math.max(textProgress, Math.round(readingProgress));
+  useEffect(() => {
+    localStorage.setItem('open-reader-font-size', String(fontSizeIndex));
+  }, [fontSizeIndex]);
+
   const currentFontClass = FONT_SIZES[fontSizeIndex].class;
 
   return (
