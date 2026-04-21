@@ -45,7 +45,13 @@ export default function ArticleView({ article, onClose, onSave, isSaved }: Artic
   const [showSpeedMenu, setShowSpeedMenu] = useState(false);
   const [sleepMode, setSleepMode] = useState(() => localStorage.getItem('open-reader-sleep-mode') === 'true');
   const [immersiveMode, setImmersiveMode] = useState(() => localStorage.getItem('open-reader-immersive') === 'true');
-  const [bookmarkedSentences, setBookmarked] = useState<Set<number>>(new Set());
+  const [bookmarkedSentences, setBookmarked] = useState<Set<number>>(() => {
+    try {
+      const saved = localStorage.getItem(`open-reader-bookmarks-${article.id}`);
+      if (saved) return new Set(JSON.parse(saved));
+    } catch {}
+    return new Set();
+  });
   const [readingProgress, setReadingProgress] = useState(0);
 
   // Get content for current chapter
@@ -123,6 +129,7 @@ export default function ArticleView({ article, onClose, onSave, isSaved }: Artic
     const nb = new Set(bookmarkedSentences);
     if (nb.has(idx)) nb.delete(idx); else nb.add(idx);
     setBookmarked(nb);
+    localStorage.setItem(`open-reader-bookmarks-${article.id}`, JSON.stringify([...nb]));
   };
 
   const toggleSleepMode = () => {
