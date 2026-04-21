@@ -6,8 +6,11 @@ export function useTTS(initialSentence: number = 0) {
     isPlaying: false,
     isPaused: false,
     currentSentence: initialSentence,
-    speed: 1,
-    selectedVoice: null,
+    speed: (() => {
+      const saved = localStorage.getItem('open-reader-tts-speed');
+      return saved ? parseFloat(saved) : 1;
+    })(),
+    selectedVoice: localStorage.getItem('open-reader-tts-voice'),
     sentences: [],
     sleepTimerMinutes: null,
     sleepTimerRemaining: null,
@@ -134,10 +137,12 @@ export function useTTS(initialSentence: number = 0) {
   }, [_updatePlaybackState]);
 
   const setSpeed = useCallback((speed: number) => {
+    localStorage.setItem('open-reader-tts-speed', String(speed));
     setState(prev => ({ ...prev, speed }));
   }, []);
 
   const setVoice = useCallback((voiceName: string) => {
+    localStorage.setItem('open-reader-tts-voice', voiceName);
     setState(prev => ({ ...prev, selectedVoice: voiceName }));
   }, []);
 
