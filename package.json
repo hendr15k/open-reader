@@ -31,7 +31,7 @@
     "@tailwindcss/typography": "^0.5.19",
     "@types/react": "^18.3.1",
     "@types/react-dom": "^18.3.0",
-    "@vitejs/plugin-react": "^4.2.1",
+    "@vitejs/plugin-react": "^6.0.1",
     "autoprefixer": "^10.4.18",
     "esmock": "^2.7.3",
     "postcss": "^8.4.35",
