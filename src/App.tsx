@@ -8,6 +8,7 @@ import URLInput from './components/URLInput';
 import ArticleView from './components/ArticleView';
 import SavedArticles from './components/SavedArticles';
 import FileUpload from './components/FileUpload';
+import SettingsPage from './components/Settings';
 const EpubReader = lazy(() => import('./components/EpubReader'));
 const EpubUpload = lazy(() => import('./components/EpubUpload'));
 const EpubLibrary = lazy(() => import('./components/EpubLibrary'));
@@ -346,73 +347,11 @@ export default function App() {
 
   if (currentTab === 'settings') {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
-        <header className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 px-4 py-4">
-          <div className="max-w-3xl mx-auto">
-            <button
-              onClick={() => setCurrentTab('home')}
-              className="text-sm text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 font-medium"
-            >
-              ← Back
-            </button>
-            <h1 className="text-xl font-bold text-gray-900 dark:text-white mt-2">Settings</h1>
-          </div>
-        </header>
-
-        <div className="max-w-3xl mx-auto px-4 py-6">
-          {/* Appearance */}
-          <section className="bg-white dark:bg-gray-900 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-800 overflow-hidden mb-4">
-            <div className="px-5 py-4 border-b border-gray-100 dark:border-gray-800">
-              <h2 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Appearance</h2>
-            </div>
-            <div className="divide-y divide-gray-100 dark:divide-gray-800">
-              <div className="px-5 py-4 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  {darkMode ? <Moon className="w-5 h-5 text-indigo-600" /> : <Sun className="w-5 h-5 text-amber-500" />}
-                  <div>
-                    <p className="font-medium text-gray-900 dark:text-white">Dark Mode</p>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">Follows system by default</p>
-                  </div>
-                </div>
-                <button
-                  onClick={toggleDarkMode}
-                  className={`relative w-12 h-7 rounded-full transition-colors ${
-                    darkMode ? 'bg-indigo-600' : 'bg-gray-300'
-                  }`}
-                >
-                  <span
-                    className={`absolute top-1 w-5 h-5 bg-white rounded-full shadow transition-transform ${
-                      darkMode ? 'translate-x-6' : 'translate-x-1'
-                    }`}
-                  />
-                </button>
-              </div>
-            </div>
-          </section>
-
-          {/* About */}
-          <section className="bg-white dark:bg-gray-900 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-800 overflow-hidden">
-            <div className="px-5 py-4 border-b border-gray-100 dark:border-gray-800">
-              <h2 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">About</h2>
-            </div>
-            <div className="p-5 space-y-4">
-              <div>
-                <p className="text-2xl font-bold text-gray-900 dark:text-white">Open Reader</p>
-                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Version 1.2.0</p>
-              </div>
-              <p className="text-gray-600 dark:text-gray-300 text-sm leading-relaxed">
-                A beautiful, distraction-free article reader with text-to-speech built right in.
-                Paste any URL to start reading.
-              </p>
-              <div className="pt-2">
-                <p className="text-xs text-gray-400 dark:text-gray-500">
-                  Powered by Jina Reader
-                </p>
-              </div>
-            </div>
-          </section>
-        </div>
-      </div>
+      <SettingsPage
+        onBack={() => setCurrentTab('home')}
+        darkMode={darkMode}
+        onToggleDarkMode={toggleDarkMode}
+      />
     );
   }
 
