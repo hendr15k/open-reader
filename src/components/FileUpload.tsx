@@ -57,7 +57,7 @@ export default function FileUpload({ onFileProcessed }: FileUploadProps) {
           throw new Error('PDF enthält keinen extrahierbaren Text. Eventuell ein Scan?');
         }
       } else if (ext === 'epub') {
-        content = 'EPUB-Extraktion: Bitte TXT oder PDF verwenden. EPUB-Support kommt bald.';
+        throw new Error('EPUB-Dateien bitte über den EPUB-Upload-Bereich hochladen.');
       }
 
       if (content.trim().length === 0) {

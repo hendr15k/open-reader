@@ -88,10 +88,14 @@ export default function ArticleView({ article, onClose, onSave, isSaved }: Artic
     }
   }, []);
 
-  // Speak chapter content on mount or chapter change
+  // Speak chapter content on mount or chapter change (only if already playing or was playing)
+  const [wasPlaying, setWasPlaying] = useState(false);
   useEffect(() => {
-    if (chapterContent && chapterContent.trim().length > 0) {
+    if (chapterContent && chapterContent.trim().length > 0 && (state.isPlaying || state.isPaused || wasPlaying)) {
       speak(chapterContent);
+    }
+    if (state.isPlaying || state.isPaused) {
+      setWasPlaying(true);
     }
   }, [activeChapter]);
 
@@ -185,6 +189,17 @@ export default function ArticleView({ article, onClose, onSave, isSaved }: Artic
   }, [fontSizeIndex]);
 
   const currentFontClass = FONT_SIZES[fontSizeIndex].class;
+  const [fontFamily, setFontFamily] = useState(() => {
+    return localStorage.getItem('open-reader-font-family') || 'system-ui, -apple-system, sans-serif';
+  });
+
+  useEffect(() => {
+    const handleStorage = () => {
+      setFontFamily(localStorage.getItem('open-reader-font-family') || 'system-ui, -apple-system, sans-serif');
+    };
+    window.addEventListener('storage', handleStorage);
+    return () => window.removeEventListener('storage', handleStorage);
+  }, []);
 
   return (
     <div className={`fixed inset-0 z-50 flex flex-col ${sleepMode ? 'bg-gray-950' : 'bg-white dark:bg-gray-950'} transition-colors duration-500`}>
@@ -264,7 +279,7 @@ export default function ArticleView({ article, onClose, onSave, isSaved }: Artic
             </div>
           )}
 
-          <div className={`prose dark:prose-invert max-w-none ${currentFontClass}`}>
+          <div className={`prose dark:prose-invert max-w-none ${currentFontClass}`} style={{ fontFamily }}>
             {state.sentences.length > 0 ? (
               state.sentences.map((sentence, idx) => {
                 const isCurrent = idx === state.currentSentence;
