@@ -90,14 +90,16 @@ export default function ArticleView({ article, onClose, onSave, isSaved }: Artic
 
   // Speak chapter content on mount or chapter change (only if already playing or was playing)
   const [wasPlaying, setWasPlaying] = useState(false);
+  const isPlayingRef = useRef(false);
+  isPlayingRef.current = state.isPlaying;
   useEffect(() => {
-    if (chapterContent && chapterContent.trim().length > 0 && (state.isPlaying || state.isPaused || wasPlaying)) {
+    setWasPlaying(prev => prev || state.isPlaying || state.isPaused);
+  }, [state.isPlaying, state.isPaused]);
+  useEffect(() => {
+    if (chapterContent && chapterContent.trim().length > 0 && (isPlayingRef.current || wasPlaying)) {
       speak(chapterContent);
     }
-    if (state.isPlaying || state.isPaused) {
-      setWasPlaying(true);
-    }
-  }, [activeChapter]);
+  }, [activeChapter, chapterContent, wasPlaying]);
 
   // Save reading progress on meaningful updates
   useEffect(() => {

@@ -173,8 +173,6 @@ export default function App() {
   const handleEpubUploaded = async (fileId: number, title: string) => {
     setEpubUpload(false);
     setEpubLibraryView(false);
-    const files = await epubDB.getAllFiles();
-    setEpubLibraryList(files.map(f => ({ id: f.id, title: f.title, author: f.author })));
     setEpubReader({ id: fileId, title });
   };
 

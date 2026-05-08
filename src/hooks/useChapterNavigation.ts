@@ -32,7 +32,6 @@ export function parseChapters(content: string): ContentParser {
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
-    let matched = false;
 
     const match = line.match(headingPattern);
     if (match) {
@@ -49,10 +48,7 @@ export function parseChapters(content: string): ContentParser {
       };
       chapterStartOffset = charOffset;
       isFirstChapter = false;
-      matched = true;
-    }
-
-    if (!matched) {
+    } else {
       currentChapterContent += line + '\n';
     }
     charOffset += line.length + 1; // +1 for newline

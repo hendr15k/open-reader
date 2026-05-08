@@ -23,7 +23,7 @@ export async function fetchArticle(url: string): Promise<Article & { content: st
     const readingTime = Math.ceil(wordCount / 200);
 
     return {
-      id: Date.now().toString(),
+      id: typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
       url,
       title,
       content: text,
