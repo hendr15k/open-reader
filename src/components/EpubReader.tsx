@@ -34,7 +34,7 @@ function formatTime(totalSeconds: number): string {
 
 export default function EpubReader({ fileId, onClose, title, author }: EpubReaderProps) {
   const [epubContent, setEpubContent] = useState<string>('');
-  const [location, setLocation] = useState<string | number | null>(null);
+  const [location, setLocation] = useState<string>('');
   const [bookmarks, setBookmarks] = useState<Set<string>>(new Set());
   const [immersiveMode, setImmersiveMode] = useState(false);
   const [showSleepMenu, setShowSleepMenu] = useState(false);
@@ -46,11 +46,13 @@ export default function EpubReader({ fileId, onClose, title, author }: EpubReade
 
   const {
     state: ttsState,
+    voices,
     speak,
     stop: ttsStop,
     pause: ttsPause,
     resume: ttsResume,
     setSpeed,
+    setVoice: ttsSetVoice,
     skipForward: ttsSkipForward,
     skipBack: ttsSkipBack,
   } = useTTS();
@@ -97,12 +99,12 @@ export default function EpubReader({ fileId, onClose, title, author }: EpubReade
   useEffect(() => { return () => { ttsStop(); }; }, []);
 
   const toggleBookmark = () => {
-    const loc = typeof location === 'string' ? location : String(location ?? '');
+    const loc = String(location);
     const newBookmarks = new Set(bookmarks);
     if (newBookmarks.has(loc)) {
       newBookmarks.delete(loc);
       epubDB.deleteBookmark(fileId, loc);
-    } else {
+    } else if (loc) {
       newBookmarks.add(loc);
       epubDB.saveBookmark(fileId, loc);
     }
@@ -113,8 +115,8 @@ export default function EpubReader({ fileId, onClose, title, author }: EpubReade
 
   const getRendition = (rendition: any) => {
     renditionRef.current = rendition;
-    rendition.on('relocated', (loc: any) => { setLocation(loc.start.href); });
-    rendition.on('locationChanged', (loc: any) => { setLocation(loc.start?.href || loc.start); });
+    rendition.on('relocated', (loc: any) => { setLocation(String(loc.start?.href || loc.start || '')); });
+    rendition.on('locationChanged', (loc: any) => { setLocation(String(loc.start?.href || loc.start || '')); });
   };
 
   const handlePlayPause = () => {
@@ -154,7 +156,7 @@ export default function EpubReader({ fileId, onClose, title, author }: EpubReade
         </div>
         <div className="flex items-center gap-1">
           <span className="text-xs text-gray-500 dark:text-gray-400 mr-1">{bookmarks.size} 🔖</span>
-          <button onClick={toggleBookmark} className={`w-9 h-9 rounded-xl flex items-center justify-center transition-colors ${bookmarks.has(typeof location === 'string' ? location : '') ? 'bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400' : 'hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 dark:text-gray-400'}`}>
+          <button onClick={toggleBookmark} className={`w-9 h-9 rounded-xl flex items-center justify-center transition-colors ${bookmarks.has(String(location)) ? 'bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400' : 'hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 dark:text-gray-400'}`}>
             <Bookmark className="w-4 h-4" />
           </button>
           <button onClick={() => setImmersiveMode(!immersiveMode)} className="w-9 h-9 rounded-xl flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 dark:text-gray-400">
@@ -256,6 +258,19 @@ export default function EpubReader({ fileId, onClose, title, author }: EpubReade
               {s}×
             </button>
           ))}
+        </div>
+
+        {/* Voice selector */}
+        <div className="flex items-center justify-center pb-2 px-4">
+          <select
+            value={ttsState.selectedVoice || ''}
+            onChange={(e) => ttsSetVoice(e.target.value)}
+            className={`px-3 py-1.5 rounded-lg text-xs max-w-36 truncate ${sleepMode ? 'bg-gray-800 text-gray-400' : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300'} border border-gray-200/50 dark:border-gray-700/50`}
+          >
+            <option value="">Stimme</option>
+            {voices.filter(v => v.lang.startsWith('de')).slice(0, 3).map(v => <option key={v.name} value={v.name}>{v.name.split(' ')[0]}</option>)}
+            {voices.filter(v => !v.lang.startsWith('de')).slice(0, 3).map(v => <option key={v.name} value={v.name}>{v.name.split(' ')[0]}</option>)}
+          </select>
         </div>
 
         {/* Sleep remaining */}

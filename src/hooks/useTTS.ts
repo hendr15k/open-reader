@@ -164,6 +164,30 @@ export function useTTS(initialSentence: number = 0) {
     _updatePlaybackState(true, false);
   }, [state.currentSentence, state.sentences, state.selectedVoice, state.speed, voices, setCurrentSentence, _updatePlaybackState]);
 
+  const jumpToSentence = useCallback((idx: number) => {
+    if (state.sentences.length === 0) return;
+    const safeIdx = Math.max(0, Math.min(idx, state.sentences.length - 1));
+    speechSynthesis.cancel();
+    setState(prev => ({ ...prev, currentSentence: safeIdx, isPlaying: true, isPaused: false }));
+    const remaining = state.sentences.slice(safeIdx).join(' ');
+    const u = new SpeechSynthesisUtterance(remaining);
+    const voice = voices.find(v => v.name === state.selectedVoice);
+    if (voice) u.voice = voice;
+    u.rate = state.speed;
+    u.onend = () => {
+      setState(p => ({ ...p, isPlaying: false, isPaused: false }));
+      _updatePlaybackState(false, false);
+      if (sleepTimerRef.current) clearTimeout(sleepTimerRef.current);
+      if (sleepTickRef.current) clearInterval(sleepTickRef.current);
+    };
+    u.onerror = () => {
+      setState(p => ({ ...p, isPlaying: false, isPaused: false }));
+      _updatePlaybackState(false, false);
+    };
+    speechSynthesis.speak(u);
+    _updatePlaybackState(true, false);
+  }, [state.sentences, state.selectedVoice, state.speed, voices, _updatePlaybackState]);
+
   const skipBack = useCallback(() => {
     const prev = Math.max(state.currentSentence - 1, 0);
     setCurrentSentence(prev);
@@ -195,5 +219,5 @@ export function useTTS(initialSentence: number = 0) {
     }, minutes * 60 * 1000);
   }, [_updatePlaybackState]);
 
-  return { state, voices, speak, pause, resume, stop, setSpeed, setVoice, setCurrentSentence, setSleepTimer, skipForward, skipBack };
+  return { state, voices, speak, pause, resume, stop, setSpeed, setVoice, setCurrentSentence, setSleepTimer, skipForward, skipBack, jumpToSentence };
 }

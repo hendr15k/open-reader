@@ -36,7 +36,7 @@ const SLEEP_OPTIONS = [
 const SPEED_OPTIONS = [0.5, 0.75, 1, 1.25, 1.5, 1.75, 2];
 
 export default function ArticleView({ article, onClose, onSave, isSaved }: ArticleViewProps) {
-  const { state, voices, speak, pause, resume, stop, setSpeed, setVoice, setCurrentSentence, setSleepTimer, skipForward, skipBack } = useTTS(parseInt(localStorage.getItem(`open-reader-progress-${article.id}`) || '0', 10));
+  const { state, voices, speak, pause, resume, stop, setSpeed, setVoice, setCurrentSentence, setSleepTimer, skipForward, skipBack, jumpToSentence } = useTTS(parseInt(localStorage.getItem(`open-reader-progress-${article.id}`) || '0', 10));
   const { chapters, activeChapter, setActiveChapter, showSidebar, setShowSidebar } = useChapters(article.content);
   const contentRef = useRef<HTMLDivElement>(null);
   const [fontSizeIndex, setFontSizeIndex] = useState(() => {
@@ -296,13 +296,7 @@ export default function ArticleView({ article, onClose, onSave, isSaved }: Artic
                         : (sleepMode ? 'text-gray-600' : 'text-gray-700 dark:text-gray-300')
                     }`}
                       onClick={() => {
-                        setCurrentSentence(idx);
-                        speechSynthesis.cancel();
-                        const u = new SpeechSynthesisUtterance(state.sentences.slice(idx).join(' '));
-                        const voice = voices.find(v => v.name === state.selectedVoice);
-                        if (voice) u.voice = voice;
-                        u.rate = state.speed;
-                        speechSynthesis.speak(u);
+                        jumpToSentence(idx);
                       }}>{sentence}</p>
                   </div>
                 );
