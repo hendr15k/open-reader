@@ -42,6 +42,7 @@ export default function EpubReader({ fileId, onClose, title, author }: EpubReade
   const [sleepMinutes, setSleepMinutes] = useState<number | null>(null);
   const [sleepRemaining, setSleepRemaining] = useState<number | null>(null);
   const renditionRef = useRef<any>(null);
+  const blobUrlRef = useRef<string>('');
   const sleepTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const locationRef = useRef<string>('');
 
@@ -92,10 +93,23 @@ export default function EpubReader({ fileId, onClose, title, author }: EpubReade
   useEffect(() => {
     epubDB.getFile(fileId).then(epub => {
       if (epub?.content) {
-        setEpubContent(epub.content as unknown as string);
+        const blob = new Blob([epub.content], { type: 'application/epub+zip' });
+        const url = URL.createObjectURL(blob);
+        setEpubContent(url);
+        blobUrlRef.current = url;
       }
     }).catch(console.error);
   }, [fileId]);
+
+  // Cleanup blob URL on unmount
+  useEffect(() => {
+    return () => {
+      if (blobUrlRef.current) {
+        URL.revokeObjectURL(blobUrlRef.current);
+        blobUrlRef.current = '';
+      }
+    };
+  }, []);
 
   // Sleep timer
   useEffect(() => {

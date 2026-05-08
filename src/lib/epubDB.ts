@@ -134,7 +134,7 @@ export const epubDB = {
     const tx = db.transaction(STORE_BOOKMARKS, 'readwrite');
     const store = tx.objectStore(STORE_BOOKMARKS);
     await new Promise<void>((resolve, reject) => {
-      const req = store.add({ fileId, location, createdAt: Date.now() });
+      const req = store.put({ fileId, location, createdAt: Date.now() });
       req.onsuccess = () => resolve();
       req.onerror = () => reject(req.error);
     });

@@ -68,6 +68,7 @@ export async function addArticle(article: Article): Promise<void> {
       uploadedAt: article.savedAt,
       totalWords: article.totalWords || article.content.split(/\s+/).length,
       readingTime: article.readingTime || Math.ceil((article.totalWords || article.content.split(/\s+/).length) / 200),
+      favorite: article.favorite || false,
     });
   } else {
     await database.put('articles', article);

@@ -168,7 +168,7 @@ export default function App() {
   const handleToggleFavorite = async (id: string, favorite: boolean) => {
     await toggleFavorite(id, favorite);
     if (currentArticle?.id === id) {
-      setIsSaved(favorite);
+      setIsSaved(true);
     }
     reload();
   };

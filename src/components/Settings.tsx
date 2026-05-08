@@ -45,8 +45,8 @@ export default function SettingsPage({ onBack, darkMode, onToggleDarkMode }: Set
       if (v.length > 0) setVoices(v);
     };
     loadVoices();
-    speechSynthesis.onvoiceschanged = loadVoices;
-    return () => { speechSynthesis.onvoiceschanged = null; };
+    speechSynthesis.addEventListener('voiceschanged', loadVoices);
+    return () => { speechSynthesis.removeEventListener('voiceschanged', loadVoices); };
   }, []);
 
   const handleSpeedChange = (speed: number) => {

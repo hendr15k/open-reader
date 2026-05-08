@@ -27,25 +27,32 @@ export function useTTS(initialSentence: number = 0) {
       if (v.length > 0) setVoices(v);
     };
     loadVoices();
-    speechSynthesis.onvoiceschanged = loadVoices;
+    speechSynthesis.addEventListener('voiceschanged', loadVoices);
     return () => {
       speechSynthesis.cancel();
-      speechSynthesis.onvoiceschanged = null;
+      speechSynthesis.removeEventListener('voiceschanged', loadVoices);
     };
   }, []);
 
   // MediaSession API - Background Audio
   useEffect(() => {
     if (!('mediaSession' in navigator)) return;
+    const nav = navigator as Navigator & { mediaSession: MediaSession };
+
+    nav.mediaSession.setActionHandler('play', null);
+    nav.mediaSession.setActionHandler('pause', null);
+    nav.mediaSession.setActionHandler('stop', null);
+    nav.mediaSession.setActionHandler('previoustrack', null);
+    nav.mediaSession.setActionHandler('nexttrack', null);
 
     if (state.isPlaying || state.isPaused) {
-      navigator.mediaSession.metadata = new MediaMetadata({
+      nav.mediaSession.metadata = new MediaMetadata({
         title: _articleTitle.current || 'Open Reader',
         artist: 'Open Reader — ElevenReader Alternative',
         album: state.isPlaying ? 'Playing' : 'Paused',
       });
 
-      navigator.mediaSession.setActionHandler('play', () => {
+      nav.mediaSession.setActionHandler('play', () => {
         setState(prev => {
           if (prev.isPaused) {
             speechSynthesis.resume();
@@ -61,23 +68,24 @@ export function useTTS(initialSentence: number = 0) {
         });
       });
 
-      navigator.mediaSession.setActionHandler('pause', () => pause());
-      navigator.mediaSession.setActionHandler('stop', () => stop());
-
-      navigator.mediaSession.setActionHandler('previoustrack', () => skipBack());
-      navigator.mediaSession.setActionHandler('nexttrack', () => skipForward());
+      nav.mediaSession.setActionHandler('pause', () => pauseRef.current());
+      nav.mediaSession.setActionHandler('stop', () => stopRef.current());
+      nav.mediaSession.setActionHandler('previoustrack', () => skipBackRef.current());
+      nav.mediaSession.setActionHandler('nexttrack', () => skipForwardRef.current());
     }
   }, [state.isPlaying, state.isPaused, state.currentSentence, state.sentences, state.speed]);
 
   useEffect(() => {
     return () => {
-      if (sleepTimerRef.current) clearTimeout(sleepTimerRef.current);
-      if (sleepTickRef.current) clearInterval(sleepTickRef.current);
-      if ('mediaSession' in navigator) {
-        navigator.mediaSession.playbackState = 'none';
-      }
+      if (sleepTimerRef.current) { clearTimeout(sleepTimerRef.current); sleepTimerRef.current = null; }
+      if (sleepTickRef.current) { clearInterval(sleepTickRef.current); sleepTickRef.current = null; }
     };
   }, []);
+
+  const pauseRef = useRef<() => void>(() => {});
+  const stopRef = useRef<() => void>(() => {});
+  const skipBackRef = useRef<() => void>(() => {});
+  const skipForwardRef = useRef<() => void>(() => {});
 
   const _updatePlaybackState = useCallback((playing: boolean, paused: boolean) => {
     if ('mediaSession' in navigator) {
@@ -214,11 +222,26 @@ export function useTTS(initialSentence: number = 0) {
       const voice = window.speechSynthesis.getVoices().find(v => v.name === prev.selectedVoice);
       if (voice) u.voice = voice;
       u.rate = prev.speed;
+      u.onend = () => {
+        setState(p => ({ ...p, isPlaying: false, isPaused: false }));
+        _updatePlaybackState(false, false);
+        if (sleepTimerRef.current) clearTimeout(sleepTimerRef.current);
+        if (sleepTickRef.current) clearInterval(sleepTickRef.current);
+      };
+      u.onerror = () => {
+        setState(p => ({ ...p, isPlaying: false, isPaused: false }));
+        _updatePlaybackState(false, false);
+      };
       speechSynthesis.speak(u);
       _updatePlaybackState(true, false);
       return { ...prev, currentSentence: prevIdx, isPlaying: true, isPaused: false };
     });
   }, [_updatePlaybackState]);
+
+  useEffect(() => { pauseRef.current = pause; }, [pause]);
+  useEffect(() => { stopRef.current = stop; }, [stop]);
+  useEffect(() => { skipBackRef.current = skipBack; }, [skipBack]);
+  useEffect(() => { skipForwardRef.current = skipForward; }, [skipForward]);
 
   const setSleepTimer = useCallback((minutes: number | null) => {
     if (sleepTimerRef.current) clearTimeout(sleepTimerRef.current);
