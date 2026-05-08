@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="de">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Open Reader</title>
+    <style>
+      body { margin: 0; font-family: system-ui, sans-serif; display: flex; align-items: center; justify-content: center; min-height: 100vh; background: #0f172a; color: #e2e8f0; }
+      .container { text-align: center; max-width: 480px; padding: 2rem; }
+      h1 { font-size: 1.5rem; margin-bottom: 0.5rem; }
+      p { color: #94a3b8; margin-bottom: 1.5rem; }
+      a { color: #818cf8; text-decoration: none; font-weight: 600; }
+      a:hover { text-decoration: underline; }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>404 — Seite nicht gefunden</h1>
+      <p>Die angeforderte Seite existiert nicht. Zurück zur <a href="/">Startseite</a>.</p>
+      <script>
+        // SPA-Fallback: Wenn die App unter / eine SPA ist, leite zur Root-Seite weiter
+        // und zeige kein doppeltes 404-Erlebnis.
+        if (window.location.pathname !== '/') {
+          window.location.replace('/');
+        }
+      </script>
+    </div>
+  </body>
+</html>

@@ -1,4 +1,5 @@
 {
+  "id": "/",
   "name": "Open Reader",
   "short_name": "OpenReader",
   "description": "Distraction-free article reader with text-to-speech and offline reading",
