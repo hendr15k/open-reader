@@ -9,7 +9,7 @@ import { epubDB } from '../lib/epubDB';
 import { useTTS } from '../hooks/useTTS';
 
 interface EpubReaderProps {
-  fileId: number;
+  fileId: string;
   onClose: () => void;
   title: string;
   author?: string;

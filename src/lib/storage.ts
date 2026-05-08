@@ -37,7 +37,7 @@ export async function getAllArticles(): Promise<Article[]> {
   const articles = await database.getAll('articles');
   const files = await database.getAll('files');
   return [...articles, ...files.map(f => ({
-    id: f.id,
+    id: String(f.id),
     url: '',
     title: f.title,
     content: f.content,

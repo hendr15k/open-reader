@@ -3,7 +3,7 @@ import { BookOpen, Trash2, Search, Play, ArrowLeft, Library } from 'lucide-react
 import { epubDB } from '../lib/epubDB';
 
 interface EpubFile {
-  id: number;
+  id: string;
   title: string;
   author?: string;
   fileName?: string;
@@ -12,7 +12,7 @@ interface EpubFile {
 }
 
 interface EpubLibraryProps {
-  onOpenEpub: (fileId: number, title: string) => void;
+  onOpenEpub: (fileId: string, title: string) => void;
   onBack: () => void;
 }
 
@@ -35,7 +35,7 @@ export default function EpubLibrary({ onOpenEpub, onBack }: EpubLibraryProps) {
   const [files, setFiles] = useState<EpubFile[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
-  const [deleting, setDeleting] = useState<number | null>(null);
+  const [deleting, setDeleting] = useState<string | null>(null);
 
   useEffect(() => { loadFiles(); }, []);
 
@@ -51,7 +51,7 @@ export default function EpubLibrary({ onOpenEpub, onBack }: EpubLibraryProps) {
     }
   };
 
-  const handleDelete = async (id: number, title: string) => {
+  const handleDelete = async (id: string, title: string) => {
     if (!confirm(`${title} wirklich löschen?`)) return;
     setDeleting(id);
     try {

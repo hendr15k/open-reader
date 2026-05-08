@@ -17,8 +17,8 @@ export function useTTS(initialSentence: number = 0) {
   });
 
   const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
-  const sleepTimerRef = useRef<NodeJS.Timeout | null>(null);
-  const sleepTickRef = useRef<NodeJS.Timeout | null>(null);
+  const sleepTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const sleepTickRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const _articleTitle = useRef<string>('');
 
   useEffect(() => {
@@ -29,7 +29,6 @@ export function useTTS(initialSentence: number = 0) {
     loadVoices();
     speechSynthesis.addEventListener('voiceschanged', loadVoices);
     return () => {
-      speechSynthesis.cancel();
       speechSynthesis.removeEventListener('voiceschanged', loadVoices);
     };
   }, []);
@@ -39,11 +38,12 @@ export function useTTS(initialSentence: number = 0) {
     if (!('mediaSession' in navigator)) return;
     const nav = navigator as Navigator & { mediaSession: MediaSession };
 
+    // Clear all handlers first to avoid stale listeners
     nav.mediaSession.setActionHandler('play', null);
     nav.mediaSession.setActionHandler('pause', null);
+    nav.mediaSession.setActionHandler('seekbackward', null);
+    nav.mediaSession.setActionHandler('seekforward', null);
     nav.mediaSession.setActionHandler('stop', null);
-    nav.mediaSession.setActionHandler('previoustrack', null);
-    nav.mediaSession.setActionHandler('nexttrack', null);
 
     if (state.isPlaying || state.isPaused) {
       nav.mediaSession.metadata = new MediaMetadata({
@@ -70,8 +70,8 @@ export function useTTS(initialSentence: number = 0) {
 
       nav.mediaSession.setActionHandler('pause', () => pauseRef.current());
       nav.mediaSession.setActionHandler('stop', () => stopRef.current());
-      nav.mediaSession.setActionHandler('previoustrack', () => skipBackRef.current());
-      nav.mediaSession.setActionHandler('nexttrack', () => skipForwardRef.current());
+      nav.mediaSession.setActionHandler('seekbackward', () => skipBackRef.current());
+      nav.mediaSession.setActionHandler('seekforward', () => skipForwardRef.current());
     }
   }, [state.isPlaying, state.isPaused, state.currentSentence, state.sentences, state.speed]);
 
@@ -82,10 +82,18 @@ export function useTTS(initialSentence: number = 0) {
     };
   }, []);
 
+  // Consolidated ref updates — runs every render to keep refs current
   const pauseRef = useRef<() => void>(() => {});
   const stopRef = useRef<() => void>(() => {});
   const skipBackRef = useRef<() => void>(() => {});
   const skipForwardRef = useRef<() => void>(() => {});
+
+  useEffect(() => {
+    pauseRef.current = pause;
+    stopRef.current = stop;
+    skipBackRef.current = skipBack;
+    skipForwardRef.current = skipForward;
+  });
 
   const _updatePlaybackState = useCallback((playing: boolean, paused: boolean) => {
     if ('mediaSession' in navigator) {
@@ -97,6 +105,11 @@ export function useTTS(initialSentence: number = 0) {
     speechSynthesis.cancel();
 
     const sentences = text.split(/(?<=[.!?])\s+/).filter((s: string) => s.trim().length > 0);
+    if (sentences.length === 0) {
+      setState(prev => ({ ...prev, sentences: [], currentSentence: 0, isPlaying: false, isPaused: false }));
+      return;
+    }
+
     const startIdx = startIndex !== undefined ? Math.max(0, Math.min(startIndex, sentences.length - 1)) : 0;
 
     _articleTitle.current = sentences[0]?.substring(0, 60) || '';
@@ -170,6 +183,7 @@ export function useTTS(initialSentence: number = 0) {
 
   const skipForward = useCallback(() => {
     setState(prev => {
+      if (prev.sentences.length === 0) return prev;
       const next = Math.min(prev.currentSentence + 1, prev.sentences.length - 1);
       const remaining = prev.sentences.slice(next).join(' ');
       speechSynthesis.cancel();
@@ -178,6 +192,10 @@ export function useTTS(initialSentence: number = 0) {
       if (voice) u.voice = voice;
       u.rate = prev.speed;
       u.onend = () => {
+        setState(p => ({ ...p, isPlaying: false, isPaused: false }));
+        _updatePlaybackState(false, false);
+      };
+      u.onerror = () => {
         setState(p => ({ ...p, isPlaying: false, isPaused: false }));
         _updatePlaybackState(false, false);
       };
@@ -215,6 +233,7 @@ export function useTTS(initialSentence: number = 0) {
 
   const skipBack = useCallback(() => {
     setState(prev => {
+      if (prev.sentences.length === 0) return prev;
       const prevIdx = Math.max(prev.currentSentence - 1, 0);
       const remaining = prev.sentences.slice(prevIdx).join(' ');
       speechSynthesis.cancel();
@@ -237,11 +256,6 @@ export function useTTS(initialSentence: number = 0) {
       return { ...prev, currentSentence: prevIdx, isPlaying: true, isPaused: false };
     });
   }, [_updatePlaybackState]);
-
-  useEffect(() => { pauseRef.current = pause; }, [pause]);
-  useEffect(() => { stopRef.current = stop; }, [stop]);
-  useEffect(() => { skipBackRef.current = skipBack; }, [skipBack]);
-  useEffect(() => { skipForwardRef.current = skipForward; }, [skipForward]);
 
   const setSleepTimer = useCallback((minutes: number | null) => {
     if (sleepTimerRef.current) clearTimeout(sleepTimerRef.current);

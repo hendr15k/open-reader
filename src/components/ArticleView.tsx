@@ -27,7 +27,15 @@ const FONT_SIZES = [
 const SPEED_OPTIONS = [0.5, 0.75, 1, 1.25, 1.5, 1.75, 2];
 
 export default function ArticleView({ article, onClose, onSave, isSaved }: ArticleViewProps) {
-  const { state, voices, speak, pause, resume, stop, setSpeed, setVoice, setCurrentSentence, setSleepTimer, skipForward, skipBack, jumpToSentence } = useTTS(parseInt(localStorage.getItem(`open-reader-progress-${article.id}`) || '0', 10));
+  const initialProgress = (() => {
+    const saved = localStorage.getItem(`open-reader-progress-${article.id}`);
+    if (saved) {
+      const parsed = parseInt(saved, 10);
+      return isNaN(parsed) ? 0 : parsed;
+    }
+    return 0;
+  })();
+  const { state, voices, speak, pause, resume, stop, setSpeed, setVoice, setCurrentSentence, setSleepTimer, skipForward, skipBack, jumpToSentence } = useTTS(initialProgress);
   const { chapters, activeChapter, setActiveChapter, showSidebar, setShowSidebar } = useChapters(article.content);
   const contentRef = useRef<HTMLDivElement>(null);
   const [fontSizeIndex, setFontSizeIndex] = useState(() => {
@@ -107,12 +115,12 @@ export default function ArticleView({ article, onClose, onSave, isSaved }: Artic
   }, [article.id, state.currentSentence]);
 
 
-  // Also save when pausing/stopping
+  // Also save when pausing/stopping — guard against stale article ID
   useEffect(() => {
     if (!state.isPlaying && !state.isPaused) {
       localStorage.setItem(`open-reader-progress-${article.id}`, String(state.currentSentence));
     }
-  }, [state.isPlaying, state.isPaused, state.currentSentence, article.id]);
+  }, [state.isPlaying, state.isPaused]);
 
   // Track reading progress (overall = text progress within chapter + chapter position)
   useEffect(() => {
@@ -185,7 +193,7 @@ export default function ArticleView({ article, onClose, onSave, isSaved }: Artic
     localStorage.setItem('open-reader-font-size', String(fontSizeIndex));
   }, [fontSizeIndex]);
 
-  const currentFontClass = FONT_SIZES[fontSizeIndex].class;
+  const currentFontClass = FONT_SIZES[Math.max(0, Math.min(fontSizeIndex, FONT_SIZES.length - 1))].class;
   const [fontFamily, setFontFamily] = useState(() => {
     return localStorage.getItem('open-reader-font-family') || 'system-ui, -apple-system, sans-serif';
   });

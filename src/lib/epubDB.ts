@@ -5,7 +5,7 @@ const STORE_BOOKMARKS = 'epub-bookmarks';
 const DB_VERSION = 3;
 
 interface EpubFile {
-  id: number;
+  id: string;
   title: string;
   author?: string;
   fileName: string;
@@ -16,7 +16,7 @@ interface EpubFile {
 }
 
 interface EpubBookmark {
-  fileId: number;
+  fileId: string;
   location: string;
   createdAt: number;
 }
@@ -43,11 +43,11 @@ function openDB(): Promise<IDBDatabase> {
 }
 
 export const epubDB = {
-  async saveFile(title: string, content: ArrayBuffer, fileName: string, author?: string, coverUrl?: string): Promise<number> {
+  async saveFile(title: string, content: ArrayBuffer, fileName: string, author?: string, coverUrl?: string): Promise<string> {
     const db = await openDB();
     const tx = db.transaction(STORE_FILES, 'readwrite');
     const store = tx.objectStore(STORE_FILES);
-    const id = Date.now();
+    const id = Date.now() + '-' + Math.random().toString(36).slice(2, 8);
     await new Promise<void>((resolve, reject) => {
       const req = store.add({ id, title, fileName, author, coverUrl, content, createdAt: Date.now(), fileSize: content.byteLength });
       req.onsuccess = () => resolve();
@@ -56,7 +56,7 @@ export const epubDB = {
     return id;
   },
 
-  async getFile(fileId: number): Promise<EpubFile | undefined> {
+  async getFile(fileId: string): Promise<EpubFile | undefined> {
     const db = await openDB();
     const tx = db.transaction(STORE_FILES, 'readonly');
     const store = tx.objectStore(STORE_FILES);
@@ -78,7 +78,7 @@ export const epubDB = {
     });
   },
 
-  async deleteFile(fileId: number): Promise<void> {
+  async deleteFile(fileId: string): Promise<void> {
     const db = await openDB();
     const tx = db.transaction([STORE_FILES, STORE_BOOKMARKS], 'readwrite');
     await Promise.all([
@@ -101,7 +101,7 @@ export const epubDB = {
     ]);
   },
 
-  async getBookmark(fileId: number): Promise<EpubBookmark | undefined> {
+  async getBookmark(fileId: string): Promise<EpubBookmark | undefined> {
     const db = await openDB();
     const tx = db.transaction(STORE_BOOKMARKS, 'readonly');
     const store = tx.objectStore(STORE_BOOKMARKS);
@@ -117,7 +117,7 @@ export const epubDB = {
     });
   },
 
-  async getBookmarks(fileId: number): Promise<EpubBookmark[]> {
+  async getBookmarks(fileId: string): Promise<EpubBookmark[]> {
     const db = await openDB();
     const tx = db.transaction(STORE_BOOKMARKS, 'readonly');
     const store = tx.objectStore(STORE_BOOKMARKS);
@@ -129,7 +129,7 @@ export const epubDB = {
     });
   },
 
-  async saveBookmark(fileId: number, location: string): Promise<void> {
+  async saveBookmark(fileId: string, location: string): Promise<void> {
     const db = await openDB();
     const tx = db.transaction(STORE_BOOKMARKS, 'readwrite');
     const store = tx.objectStore(STORE_BOOKMARKS);
@@ -140,7 +140,7 @@ export const epubDB = {
     });
   },
 
-  async deleteBookmark(fileId: number, location: string): Promise<void> {
+  async deleteBookmark(fileId: string, location: string): Promise<void> {
     const db = await openDB();
     const tx = db.transaction(STORE_BOOKMARKS, 'readwrite');
     const store = tx.objectStore(STORE_BOOKMARKS);
@@ -151,7 +151,7 @@ export const epubDB = {
     });
   },
 
-  async saveProgress(fileId: number, location: string): Promise<void> {
+  async saveProgress(fileId: string, location: string): Promise<void> {
     const db = await openDB();
     const tx = db.transaction('epub-progress', 'readwrite');
     const store = tx.objectStore('epub-progress');
@@ -162,7 +162,7 @@ export const epubDB = {
     });
   },
 
-  async getProgress(fileId: number): Promise<string | null> {
+  async getProgress(fileId: string): Promise<string | null> {
     const db = await openDB();
     const tx = db.transaction('epub-progress', 'readonly');
     const store = tx.objectStore('epub-progress');

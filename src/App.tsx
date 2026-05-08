@@ -15,7 +15,7 @@ const EpubUpload = lazy(() => import('./components/EpubUpload'));
 const EpubLibrary = lazy(() => import('./components/EpubLibrary'));
 
 interface EpubEntry {
-  id: number;
+  id: string;
   title: string;
   author?: string;
 }
@@ -55,7 +55,6 @@ export default function App() {
   const [epubReader, setEpubReader] = useState<EpubEntry | null>(null);
   const [epubUpload, setEpubUpload] = useState(false);
   const [epubLibraryView, setEpubLibraryView] = useState(false);
-  const [_, setEpubLibraryList] = useState<EpubEntry[]>([]);
   const [darkMode, setDarkMode] = useState(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('open-reader-dark-mode');
@@ -72,8 +71,8 @@ export default function App() {
   // Load EPUB library
   useEffect(() => {
     const load = async () => {
-      const files = await epubDB.getAllFiles();
-      setEpubLibraryList(files.map(f => ({ id: f.id, title: f.title, author: f.author })));
+      await epubDB.getAllFiles();
+      // EPUB library is loaded on-demand by EpubLibrary component
     };
     load().catch(err => console.error('Failed to load EPUB library:', err));
   }, []);
@@ -132,7 +131,7 @@ export default function App() {
   const handleFileProcessed = async (content: string, title: string, fileName: string, fileType: string) => {
     const wordCount = content.split(/\s+/).length;
     const article: Article = {
-      id: 'file_' + Date.now(),
+      id: 'file_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
       title: title,
       content: content,
       author: `Uploaded ${fileType.toUpperCase()}`,
@@ -179,7 +178,7 @@ export default function App() {
   };
 
   // EPUB Upload handler
-  const handleEpubUploaded = async (fileId: number, title: string) => {
+  const handleEpubUploaded = async (fileId: string, title: string) => {
     setEpubUpload(false);
     setEpubLibraryView(false);
     setEpubReader({ id: fileId, title });

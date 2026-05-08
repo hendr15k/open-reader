@@ -3,7 +3,7 @@ import { Upload, BookOpen, X, AlertCircle } from 'lucide-react';
 import { epubDB } from '../lib/epubDB';
 
 interface EpubUploadProps {
-  onUploadComplete?: (fileId: number, title: string) => void;
+  onUploadComplete?: (fileId: string, title: string) => void;
   onCancel?: () => void;
 }
 
