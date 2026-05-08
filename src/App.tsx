@@ -75,7 +75,7 @@ export default function App() {
       const files = await epubDB.getAllFiles();
       setEpubLibraryList(files.map(f => ({ id: f.id, title: f.title, author: f.author })));
     };
-    load();
+    load().catch(err => console.error('Failed to load EPUB library:', err));
   }, []);
 
   // Apply dark mode

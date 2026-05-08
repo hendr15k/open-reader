@@ -46,6 +46,7 @@ export default function SettingsPage({ onBack, darkMode, onToggleDarkMode }: Set
     };
     loadVoices();
     speechSynthesis.onvoiceschanged = loadVoices;
+    return () => { speechSynthesis.onvoiceschanged = null; };
   }, []);
 
   const handleSpeedChange = (speed: number) => {

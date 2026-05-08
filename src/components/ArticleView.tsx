@@ -84,7 +84,11 @@ export default function ArticleView({ article, onClose, onSave, isSaved }: Artic
   const isPlayingRef = useRef(false);
   isPlayingRef.current = state.isPlaying;
   useEffect(() => {
-    setWasPlaying(prev => prev || state.isPlaying || state.isPaused);
+    if (state.isPlaying || state.isPaused) {
+      setWasPlaying(true);
+    } else if (!state.isPlaying && !state.isPaused && !isPlayingRef.current) {
+      setWasPlaying(false);
+    }
   }, [state.isPlaying, state.isPaused]);
   useEffect(() => {
     if (chapterContent && chapterContent.trim().length > 0 && (isPlayingRef.current || wasPlaying)) {

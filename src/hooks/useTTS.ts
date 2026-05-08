@@ -28,7 +28,10 @@ export function useTTS(initialSentence: number = 0) {
     };
     loadVoices();
     speechSynthesis.onvoiceschanged = loadVoices;
-    return () => { speechSynthesis.cancel(); };
+    return () => {
+      speechSynthesis.cancel();
+      speechSynthesis.onvoiceschanged = null;
+    };
   }, []);
 
   // MediaSession API - Background Audio
@@ -158,55 +161,64 @@ export function useTTS(initialSentence: number = 0) {
   }, []);
 
   const skipForward = useCallback(() => {
-    const next = Math.min(state.currentSentence + 1, state.sentences.length - 1);
-    setCurrentSentence(next);
-    const remaining = state.sentences.slice(next).join(' ');
-    speechSynthesis.cancel();
-    const u = new SpeechSynthesisUtterance(remaining);
-    const voice = voices.find(v => v.name === state.selectedVoice);
-    if (voice) u.voice = voice;
-    u.rate = state.speed;
-    u.onend = () => { setState(p => ({ ...p, isPlaying: false, isPaused: false })); _updatePlaybackState(false, false); };
-    speechSynthesis.speak(u);
-    _updatePlaybackState(true, false);
-  }, [state.currentSentence, state.sentences, state.selectedVoice, state.speed, voices, setCurrentSentence, _updatePlaybackState]);
+    setState(prev => {
+      const next = Math.min(prev.currentSentence + 1, prev.sentences.length - 1);
+      const remaining = prev.sentences.slice(next).join(' ');
+      speechSynthesis.cancel();
+      const u = new SpeechSynthesisUtterance(remaining);
+      const voice = window.speechSynthesis.getVoices().find(v => v.name === prev.selectedVoice);
+      if (voice) u.voice = voice;
+      u.rate = prev.speed;
+      u.onend = () => {
+        setState(p => ({ ...p, isPlaying: false, isPaused: false }));
+        _updatePlaybackState(false, false);
+      };
+      speechSynthesis.speak(u);
+      _updatePlaybackState(true, false);
+      return { ...prev, currentSentence: next, isPlaying: true, isPaused: false };
+    });
+  }, [_updatePlaybackState]);
 
   const jumpToSentence = useCallback((idx: number) => {
-    if (state.sentences.length === 0) return;
-    const safeIdx = Math.max(0, Math.min(idx, state.sentences.length - 1));
-    speechSynthesis.cancel();
-    setState(prev => ({ ...prev, currentSentence: safeIdx, isPlaying: true, isPaused: false }));
-    const remaining = state.sentences.slice(safeIdx).join(' ');
-    const u = new SpeechSynthesisUtterance(remaining);
-    const voice = voices.find(v => v.name === state.selectedVoice);
-    if (voice) u.voice = voice;
-    u.rate = state.speed;
-    u.onend = () => {
-      setState(p => ({ ...p, isPlaying: false, isPaused: false }));
-      _updatePlaybackState(false, false);
-      if (sleepTimerRef.current) clearTimeout(sleepTimerRef.current);
-      if (sleepTickRef.current) clearInterval(sleepTickRef.current);
-    };
-    u.onerror = () => {
-      setState(p => ({ ...p, isPlaying: false, isPaused: false }));
-      _updatePlaybackState(false, false);
-    };
-    speechSynthesis.speak(u);
-    _updatePlaybackState(true, false);
-  }, [state.sentences, state.selectedVoice, state.speed, voices, _updatePlaybackState]);
+    setState(prev => {
+      if (prev.sentences.length === 0) return prev;
+      const safeIdx = Math.max(0, Math.min(idx, prev.sentences.length - 1));
+      const remaining = prev.sentences.slice(safeIdx).join(' ');
+      speechSynthesis.cancel();
+      const u = new SpeechSynthesisUtterance(remaining);
+      const voice = window.speechSynthesis.getVoices().find(v => v.name === prev.selectedVoice);
+      if (voice) u.voice = voice;
+      u.rate = prev.speed;
+      u.onend = () => {
+        setState(p => ({ ...p, isPlaying: false, isPaused: false }));
+        _updatePlaybackState(false, false);
+        if (sleepTimerRef.current) clearTimeout(sleepTimerRef.current);
+        if (sleepTickRef.current) clearInterval(sleepTickRef.current);
+      };
+      u.onerror = () => {
+        setState(p => ({ ...p, isPlaying: false, isPaused: false }));
+        _updatePlaybackState(false, false);
+      };
+      speechSynthesis.speak(u);
+      _updatePlaybackState(true, false);
+      return { ...prev, currentSentence: safeIdx, isPlaying: true, isPaused: false };
+    });
+  }, [_updatePlaybackState]);
 
   const skipBack = useCallback(() => {
-    const prev = Math.max(state.currentSentence - 1, 0);
-    setCurrentSentence(prev);
-    const remaining = state.sentences.slice(prev).join(' ');
-    speechSynthesis.cancel();
-    const u = new SpeechSynthesisUtterance(remaining);
-    const voice = voices.find(v => v.name === state.selectedVoice);
-    if (voice) u.voice = voice;
-    u.rate = state.speed;
-    speechSynthesis.speak(u);
-    _updatePlaybackState(true, false);
-  }, [state.currentSentence, state.sentences, state.selectedVoice, state.speed, voices, setCurrentSentence, _updatePlaybackState]);
+    setState(prev => {
+      const prevIdx = Math.max(prev.currentSentence - 1, 0);
+      const remaining = prev.sentences.slice(prevIdx).join(' ');
+      speechSynthesis.cancel();
+      const u = new SpeechSynthesisUtterance(remaining);
+      const voice = window.speechSynthesis.getVoices().find(v => v.name === prev.selectedVoice);
+      if (voice) u.voice = voice;
+      u.rate = prev.speed;
+      speechSynthesis.speak(u);
+      _updatePlaybackState(true, false);
+      return { ...prev, currentSentence: prevIdx, isPlaying: true, isPaused: false };
+    });
+  }, [_updatePlaybackState]);
 
   const setSleepTimer = useCallback((minutes: number | null) => {
     if (sleepTimerRef.current) clearTimeout(sleepTimerRef.current);

@@ -45,15 +45,26 @@ export default function EpubReader({ fileId, onClose, title, author }: EpubReade
   const sleepTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const locationRef = useRef<string>('');
 
+  const handleRelocated = (loc: any) => {
+    const locStr = String(loc.start?.href || loc.start || '');
+    setLocation(locStr);
+    locationRef.current = locStr;
+  };
+  const handleLocationChanged = (loc: any) => {
+    const locStr = String(loc.start?.href || loc.start || '');
+    setLocation(locStr);
+    locationRef.current = locStr;
+  };
+
   useEffect(() => {
     epubDB.getProgress(fileId).then(progress => {
       if (progress) setLocation(progress);
-    });
+    }).catch(console.error);
   }, [fileId]);
 
   useEffect(() => {
     if (locationRef.current) {
-      epubDB.saveProgress(fileId, locationRef.current);
+      epubDB.saveProgress(fileId, locationRef.current).catch(console.error);
     }
   }, [location, fileId]);
 
@@ -74,7 +85,7 @@ export default function EpubReader({ fileId, onClose, title, author }: EpubReade
   useEffect(() => {
     epubDB.getBookmarks(fileId).then(bms => {
       if (bms) setBookmarks(new Set(bms.map(b => b.location)));
-    });
+    }).catch(console.error);
   }, [fileId]);
 
   // Load EPUB
@@ -83,7 +94,7 @@ export default function EpubReader({ fileId, onClose, title, author }: EpubReade
       if (epub?.content) {
         setEpubContent(epub.content as unknown as string);
       }
-    });
+    }).catch(console.error);
   }, [fileId]);
 
   // Sleep timer
@@ -106,7 +117,7 @@ export default function EpubReader({ fileId, onClose, title, author }: EpubReade
       }, 1000);
     }
     return () => { if (sleepTimerRef.current) clearInterval(sleepTimerRef.current); };
-  }, [sleepMinutes]);
+  }, [sleepMinutes, ttsStop]);
 
   // Cleanup TTS on unmount
   useEffect(() => { return () => { ttsStop(); }; }, []);
@@ -116,10 +127,10 @@ export default function EpubReader({ fileId, onClose, title, author }: EpubReade
     const newBookmarks = new Set(bookmarks);
     if (newBookmarks.has(loc)) {
       newBookmarks.delete(loc);
-      epubDB.deleteBookmark(fileId, loc);
+      epubDB.deleteBookmark(fileId, loc).catch(console.error);
     } else if (loc) {
       newBookmarks.add(loc);
-      epubDB.saveBookmark(fileId, loc);
+      epubDB.saveBookmark(fileId, loc).catch(console.error);
     }
     setBookmarks(newBookmarks);
   };
@@ -127,17 +138,13 @@ export default function EpubReader({ fileId, onClose, title, author }: EpubReade
   const handleSave = () => { /* save handled via IndexedDB */ };
 
   const getRendition = (rendition: any) => {
+    if (renditionRef.current) {
+      renditionRef.current.off('relocated', handleRelocated);
+      renditionRef.current.off('locationChanged', handleLocationChanged);
+    }
     renditionRef.current = rendition;
-    rendition.on('relocated', (loc: any) => { 
-      const locStr = String(loc.start?.href || loc.start || '');
-      setLocation(locStr); 
-      locationRef.current = locStr;
-    });
-    rendition.on('locationChanged', (loc: any) => { 
-      const locStr = String(loc.start?.href || loc.start || '');
-      setLocation(locStr); 
-      locationRef.current = locStr;
-    });
+    rendition.on('relocated', handleRelocated);
+    rendition.on('locationChanged', handleLocationChanged);
   };
 
   const handlePlayPause = () => {
