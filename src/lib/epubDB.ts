@@ -2,7 +2,7 @@
 const DB_NAME = 'open-reader-epubs';
 const STORE_FILES = 'epub-files';
 const STORE_BOOKMARKS = 'epub-bookmarks';
-const DB_VERSION = 2;
+const DB_VERSION = 3;
 
 interface EpubFile {
   id: number;
@@ -32,6 +32,9 @@ function openDB(): Promise<IDBDatabase> {
       if (!db.objectStoreNames.contains(STORE_BOOKMARKS)) {
         const store = db.createObjectStore(STORE_BOOKMARKS, { keyPath: ['fileId', 'location'] });
         store.createIndex('fileId', 'fileId', { unique: false });
+      }
+      if (!db.objectStoreNames.contains('epub-progress')) {
+        db.createObjectStore('epub-progress', { keyPath: 'fileId' });
       }
     };
     req.onsuccess = () => resolve(req.result);
@@ -144,6 +147,28 @@ export const epubDB = {
     await new Promise<void>((resolve, reject) => {
       const req = store.delete([fileId, location]);
       req.onsuccess = () => resolve();
+      req.onerror = () => reject(req.error);
+    });
+  },
+
+  async saveProgress(fileId: number, location: string): Promise<void> {
+    const db = await openDB();
+    const tx = db.transaction('epub-progress', 'readwrite');
+    const store = tx.objectStore('epub-progress');
+    await new Promise<void>((resolve, reject) => {
+      const req = store.put({ fileId, location });
+      req.onsuccess = () => resolve();
+      req.onerror = () => reject(req.error);
+    });
+  },
+
+  async getProgress(fileId: number): Promise<string | null> {
+    const db = await openDB();
+    const tx = db.transaction('epub-progress', 'readonly');
+    const store = tx.objectStore('epub-progress');
+    return new Promise((resolve, reject) => {
+      const req = store.get(fileId);
+      req.onsuccess = () => resolve(req.result?.location || null);
       req.onerror = () => reject(req.error);
     });
   },

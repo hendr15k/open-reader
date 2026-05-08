@@ -48,6 +48,7 @@ export async function getAllArticles(): Promise<Article[]> {
     source: 'file' as const,
     fileName: f.fileName,
     totalWords: f.totalWords,
+    favorite: f.favorite || false,
   }))];
 }
 
@@ -130,4 +131,22 @@ export async function removeBookmark(id: string): Promise<void> {
 export async function getBookmarkCount(): Promise<number> {
   const database = await getDB();
   return (await database.getAllKeys('bookmarks')).length;
+}
+
+export async function getFavoriteArticles(): Promise<string[]> {
+  const database = await getDB();
+  const articles = await database.getAll('articles');
+  const files = await database.getAll('files');
+  const favIds: string[] = [];
+  for (const a of articles) { if (a.favorite) favIds.push(a.url || a.id); }
+  for (const f of files) { if (f.favorite) favIds.push(f.id); }
+  return favIds;
+}
+
+export async function toggleFavorite(id: string, isFavorite: boolean): Promise<void> {
+  const database = await getDB();
+  const article = await database.get('articles', id);
+  const file = await database.get('files', id);
+  if (article) { await database.put('articles', { ...article, favorite: isFavorite }); }
+  if (file) { await database.put('files', { ...file, favorite: isFavorite }); }
 }

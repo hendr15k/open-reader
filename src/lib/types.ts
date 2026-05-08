@@ -10,6 +10,7 @@ export interface Article {
   source?: 'url' | 'file';
   fileName?: string;
   totalWords?: number;
+  favorite?: boolean;
 }
 
 export interface TTSState {

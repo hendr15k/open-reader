@@ -4,6 +4,7 @@ import { Article, Tab } from './lib/types';
 import { fetchArticle } from './lib/jina';
 import { useArticleStorage } from './hooks/useArticleStorage';
 import { epubDB } from './lib/epubDB';
+import { toggleFavorite } from './lib/storage';
 import URLInput from './components/URLInput';
 import ArticleView from './components/ArticleView';
 import SavedArticles from './components/SavedArticles';
@@ -162,6 +163,14 @@ export default function App() {
     } catch (err) {
       console.error('Error deleting article:', err);
     }
+  };
+
+  const handleToggleFavorite = async (id: string, favorite: boolean) => {
+    await toggleFavorite(id, favorite);
+    if (currentArticle?.id === id) {
+      setIsSaved(favorite);
+    }
+    reload();
   };
 
   const handleOpenDemo = () => {
@@ -329,7 +338,7 @@ export default function App() {
   if (currentTab === 'saved') {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
-        <SavedArticles
+          <SavedArticles
           articles={articles}
           loading={loading}
           onSelectArticle={(article) => {
@@ -337,6 +346,7 @@ export default function App() {
             setIsSaved(true);
           }}
           onDeleteArticle={handleDeleteArticle}
+          onToggleFavorite={handleToggleFavorite}
           onBack={() => setCurrentTab('home')}
         />
       </div>

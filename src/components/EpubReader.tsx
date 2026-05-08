@@ -43,6 +43,19 @@ export default function EpubReader({ fileId, onClose, title, author }: EpubReade
   const [sleepRemaining, setSleepRemaining] = useState<number | null>(null);
   const renditionRef = useRef<any>(null);
   const sleepTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const locationRef = useRef<string>('');
+
+  useEffect(() => {
+    epubDB.getProgress(fileId).then(progress => {
+      if (progress) setLocation(progress);
+    });
+  }, [fileId]);
+
+  useEffect(() => {
+    if (locationRef.current) {
+      epubDB.saveProgress(fileId, locationRef.current);
+    }
+  }, [location, fileId]);
 
   const {
     state: ttsState,
@@ -115,8 +128,16 @@ export default function EpubReader({ fileId, onClose, title, author }: EpubReade
 
   const getRendition = (rendition: any) => {
     renditionRef.current = rendition;
-    rendition.on('relocated', (loc: any) => { setLocation(String(loc.start?.href || loc.start || '')); });
-    rendition.on('locationChanged', (loc: any) => { setLocation(String(loc.start?.href || loc.start || '')); });
+    rendition.on('relocated', (loc: any) => { 
+      const locStr = String(loc.start?.href || loc.start || '');
+      setLocation(locStr); 
+      locationRef.current = locStr;
+    });
+    rendition.on('locationChanged', (loc: any) => { 
+      const locStr = String(loc.start?.href || loc.start || '');
+      setLocation(locStr); 
+      locationRef.current = locStr;
+    });
   };
 
   const handlePlayPause = () => {

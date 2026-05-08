@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import {
   Play, Pause, Square, Save, ChevronLeft,
-  SkipBack, SkipForward, Moon, Timer, Maximize2, Minimize2, Bookmark, BookOpen
+  SkipBack, SkipForward, Moon, Timer, Maximize2, Minimize2, Bookmark, BookOpen, Download
 } from 'lucide-react';
 import { Article } from '../lib/types';
 import { useTTS } from '../hooks/useTTS';
@@ -22,15 +22,6 @@ const FONT_SIZES = [
   { name: 'Medium', class: 'text-base' },
   { name: 'Large', class: 'text-lg' },
   { name: 'X-Large', class: 'text-xl' },
-];
-
-const SLEEP_OPTIONS = [
-  { label: 'Aus', minutes: null },
-  { label: '5 Min', minutes: 5 },
-  { label: '15 Min', minutes: 15 },
-  { label: '30 Min', minutes: 30 },
-  { label: '45 Min', minutes: 45 },
-  { label: '60 Min', minutes: 60 },
 ];
 
 const SPEED_OPTIONS = [0.5, 0.75, 1, 1.25, 1.5, 1.75, 2];
@@ -335,10 +326,28 @@ export default function ArticleView({ article, onClose, onSave, isSaved }: Artic
             <button onClick={() => setFontSizeIndex(p => Math.min(FONT_SIZES.length - 1, p + 1))} className={`w-10 h-10 rounded-xl ${sleepMode ? 'bg-gray-800' : 'bg-gray-100/50 dark:bg-gray-800/50'} flex items-center justify-center ${sleepMode ? 'text-gray-400' : 'text-gray-600 dark:text-gray-400'} hover:bg-gray-200/50 text-xs font-bold`}>A+</button>
           </div>
         </div>
-        <div className={`flex items-center justify-between px-6 pb-4 transition-all duration-300 ${immersiveMode ? 'opacity-0 pointer-events-none h-0 overflow-hidden' : ''}`}>
-          <div className="relative">
+        <div className="flex items-center justify-between px-6 pb-4 transition-all duration-300 ${immersiveMode ? 'opacity-0 pointer-events-none h-0 overflow-hidden' : ''}">
+          <div className="relative flex items-center gap-2">
+            <button onClick={() => {
+              const blob = new Blob([article.content], { type: 'text/plain' });
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement('a');
+              a.href = url;
+              a.download = `${article.title.replace(/[^a-zA-Z0-9]/g, '_').slice(0, 50)}.txt`;
+              a.click();
+              URL.revokeObjectURL(url);
+            }} className={`flex items-center gap-2 px-3 py-2 rounded-xl ${sleepMode ? 'bg-gray-800 text-gray-400' : 'bg-gray-100/80 dark:bg-gray-800/80 text-gray-700 dark:text-gray-300'} text-xs font-medium border border-gray-200/50 dark:border-gray-700/50 hover:bg-gray-200/50 dark:hover:bg-gray-700/50 transition-colors`} title="Als TXT herunterladen">
+              <Download className="w-3.5 h-3.5" />
+              <span>Export</span>
+            </button>
             <button onClick={() => setShowSleepMenu(!showSleepMenu)} className={`flex items-center gap-2 px-3 py-2 rounded-xl ${state.sleepTimerMinutes ? 'bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400' : sleepMode ? 'bg-gray-800 text-gray-400' : 'bg-gray-100/50 dark:bg-gray-800/50 text-gray-500 dark:text-gray-400'} text-xs font-medium`}><Timer className="w-3.5 h-3.5" />{state.sleepTimerMinutes ? `${state.sleepTimerMinutes} Min` : 'Sleep Timer'}</button>
-            {showSleepMenu && (<div className="absolute bottom-12 left-0 bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-200 dark:border-gray-700 p-2 z-50 min-w-[140px]">{SLEEP_OPTIONS.map(opt => (<button key={opt.label} onClick={() => { setSleepTimer(opt.minutes); setShowSleepMenu(false); }} className={`w-full px-3 py-2 text-sm rounded-lg text-left ${state.sleepTimerMinutes === opt.minutes ? 'bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400 font-medium' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'}`}>{opt.label}</button>))}</div>)}
+            {showSleepMenu && (
+              <div className="absolute bottom-12 left-0 bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-200 dark:border-gray-700 p-2 z-50 min-w-[140px]">
+                {[{label: 'Aus', minutes: null}, {label: '5 Min', minutes: 5}, {label: '15 Min', minutes: 15}, {label: '30 Min', minutes: 30}, {label: '45 Min', minutes: 45}, {label: '60 Min', minutes: 60}].map(opt => (
+                  <button key={opt.label} onClick={() => { setSleepTimer(opt.minutes); setShowSleepMenu(false); }} className={`w-full px-3 py-2 text-sm rounded-lg text-left ${state.sleepTimerMinutes === opt.minutes ? 'bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400 font-medium' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'}`}>{opt.label}</button>
+                ))}
+              </div>
+            )}
           </div>
           <select value={state.selectedVoice || ''} onChange={(e) => setVoice(e.target.value)} className={`px-3 py-2 rounded-xl ${sleepMode ? 'bg-gray-800 text-gray-400' : 'bg-gray-100/80 dark:bg-gray-800/80 text-gray-700 dark:text-gray-300'} text-xs font-medium border border-gray-200/50 dark:border-gray-700/50 max-w-32 truncate`}><option value="">Stimme</option>{voices.filter(v => v.lang.startsWith('de')).slice(0, 3).map(v => <option key={v.name} value={v.name}>{v.name.split(' ')[0]}</option>)}{voices.filter(v => !v.lang.startsWith('de')).slice(0, 3).map(v => <option key={v.name} value={v.name}>{v.name.split(' ')[0]}</option>)}</select>
         </div>

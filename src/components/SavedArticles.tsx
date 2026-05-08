@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Trash2, Bookmark, Search, Grid, List, FileText, Globe, SortAsc, SortDesc } from 'lucide-react';
+import { Trash2, Bookmark, Search, Grid, List, FileText, Globe, SortAsc, SortDesc, Star } from 'lucide-react';
 import { Article } from '../lib/types';
 
 function hasSavedProgress(articleId: string): boolean {
@@ -17,6 +17,7 @@ interface SavedArticlesProps {
   onSelectArticle: (article: Article) => void;
   onDeleteArticle: (id: string) => void;
   onBack: () => void;
+  onToggleFavorite: (id: string, favorite: boolean) => void;
 }
 
 export default function SavedArticles({
@@ -25,6 +26,7 @@ export default function SavedArticles({
   onSelectArticle,
   onDeleteArticle,
   onBack,
+  onToggleFavorite,
 }: SavedArticlesProps) {
   const [search, setSearch] = useState('');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
@@ -163,10 +165,16 @@ export default function SavedArticles({
                         {article.title}
                       </h3>
                     </button>
-                    <button onClick={() => onDeleteArticle(article.id)}
-                      className="p-1.5 text-gray-400 hover:text-red-500 rounded-lg transition-colors opacity-0 group-hover:opacity-100 flex-shrink-0" title="Löschen">
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
+                    <div className="flex items-center gap-1">
+                      <button onClick={(e) => { e.stopPropagation(); onToggleFavorite(article.id, !article.favorite); }}
+                        className="p-1.5 rounded-lg transition-colors" title={article.favorite ? 'Entfavorisieren' : 'Zu Favoriten'}>
+                        <Star className={`w-3.5 h-3.5 ${article.favorite ? 'text-yellow-500 fill-yellow-500' : 'text-gray-400 hover:text-yellow-400'}`} />
+                      </button>
+                      <button onClick={() => onDeleteArticle(article.id)}
+                        className="p-1.5 text-gray-400 hover:text-red-500 rounded-lg transition-colors opacity-0 group-hover:opacity-100 flex-shrink-0" title="Löschen">
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
                   </div>
 
                   {/* Meta */}
@@ -210,10 +218,16 @@ export default function SavedArticles({
                       {article.fileName && <span>• {article.fileName}</span>}
                     </div>
                   </button>
-                  <button onClick={() => onDeleteArticle(article.id)}
-                    className="p-2 text-gray-400 hover:text-red-500 rounded-xl transition-colors opacity-0 group-hover:opacity-100 flex-shrink-0" title="Löschen">
-                    <Trash2 className="w-4 h-4" />
-                  </button>
+                  <div className="flex items-center gap-1">
+                    <button onClick={() => onToggleFavorite(article.id, !article.favorite)}
+                      className="p-2 rounded-xl transition-colors" title={article.favorite ? 'Entfavorisieren' : 'Zu Favoriten'}>
+                      <Star className={`w-4 h-4 ${article.favorite ? 'text-yellow-500 fill-yellow-500' : 'text-gray-400 hover:text-yellow-400'}`} />
+                    </button>
+                    <button onClick={() => onDeleteArticle(article.id)}
+                      className="p-2 text-gray-400 hover:text-red-500 rounded-xl transition-colors opacity-0 group-hover:opacity-100 flex-shrink-0" title="Löschen">
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
                 </div>
               </div>
             ))}
