@@ -27,7 +27,7 @@
     "react-reader": "^2.0.15"
   },
   "devDependencies": {
-    "@capacitor/cli": "^6.1.2",
+    "@capacitor/cli": "^8.3.3",
     "@tailwindcss/typography": "^0.5.19",
     "@types/react": "^18.3.1",
     "@types/react-dom": "^18.3.0",
