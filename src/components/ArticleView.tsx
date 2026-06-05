@@ -87,32 +87,44 @@ export default function ArticleView({ article, onClose, onSave, isSaved }: Artic
     }
   }, []);
 
-  // Speak chapter content on mount or chapter change (only if already playing or was playing)
-  const [wasPlaying, setWasPlaying] = useState(false);
-  const isPlayingRef = useRef(false);
-  isPlayingRef.current = state.isPlaying;
+  // Auto-speak the current chapter content when it changes, but only if the
+  // user is actively playing. We intentionally do NOT auto-resume on chapter
+  // change while paused/stopped — that was a confusing UX where pausing then
+  // changing chapter silently restarted TTS.
   useEffect(() => {
-    if (state.isPlaying || state.isPaused) {
-      setWasPlaying(true);
-    } else if (!state.isPlaying && !state.isPaused && !isPlayingRef.current) {
-      setWasPlaying(false);
+    if (
+      chapterContent &&
+      chapterContent.trim().length > 0 &&
+      state.isPlaying &&
+      !state.isPaused
+    ) {
+      speak(chapterContent, state.currentSentence > 0 ? state.currentSentence : undefined);
     }
-  }, [state.isPlaying, state.isPaused]);
-  useEffect(() => {
-    if (chapterContent && chapterContent.trim().length > 0 && (isPlayingRef.current || wasPlaying)) {
-      speak(chapterContent);
-    }
-  }, [activeChapter, chapterContent, wasPlaying]);
+    // We intentionally exclude `speak` and `state.currentSentence` from deps:
+    // we only want to re-speak when the chapter content itself changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeChapter, chapterContent]);
 
-  // Save reading progress on meaningful updates
+  // Save reading progress on a fixed 5s cadence. We use a ref to read the
+  // latest sentence index inside the interval callback — depending on
+  // `state.currentSentence` would reset the interval on every change and
+  // the throttle would never actually fire.
+  const currentSentenceRef = useRef(state.currentSentence);
+  currentSentenceRef.current = state.currentSentence;
   useEffect(() => {
     const saveProgress = () => {
-      localStorage.setItem(`open-reader-progress-${article.id}`, String(state.currentSentence));
+      try {
+        localStorage.setItem(
+          `open-reader-progress-${article.id}`,
+          String(currentSentenceRef.current)
+        );
+      } catch {
+        // Storage may be unavailable (private mode, quota) — silently ignore
+      }
     };
-    // Throttle: only save when sentence changes significantly
     const interval = setInterval(saveProgress, 5000);
     return () => clearInterval(interval);
-  }, [article.id, state.currentSentence]);
+  }, [article.id]);
 
 
   // Also save when pausing/stopping — guard against stale article ID
@@ -146,7 +158,8 @@ export default function ArticleView({ article, onClose, onSave, isSaved }: Artic
   const handlePlay = () => {
     if (state.isPlaying) pause();
     else if (state.isPaused) resume();
-    else speak(chapterContent);
+    // Resume from saved sentence index so restored progress is honored
+    else speak(chapterContent, state.currentSentence > 0 ? state.currentSentence : undefined);
   };
 
   const handleStop = () => { stop(); };
@@ -338,7 +351,7 @@ export default function ArticleView({ article, onClose, onSave, isSaved }: Artic
             <button onClick={() => setFontSizeIndex(p => Math.min(FONT_SIZES.length - 1, p + 1))} className={`w-10 h-10 rounded-xl ${sleepMode ? 'bg-gray-800' : 'bg-gray-100/50 dark:bg-gray-800/50'} flex items-center justify-center ${sleepMode ? 'text-gray-400' : 'text-gray-600 dark:text-gray-400'} hover:bg-gray-200/50 text-xs font-bold`}>A+</button>
           </div>
         </div>
-        <div className="flex items-center justify-between px-6 pb-4 transition-all duration-300 ${immersiveMode ? 'opacity-0 pointer-events-none h-0 overflow-hidden' : ''}">
+        <div className={`flex items-center justify-between px-6 pb-4 transition-all duration-300 ${immersiveMode ? 'opacity-0 pointer-events-none h-0 overflow-hidden' : ''}`} aria-hidden={immersiveMode}>
           <div className="relative flex items-center gap-2">
             <button onClick={() => {
               const blob = new Blob([article.content], { type: 'text/plain' });
