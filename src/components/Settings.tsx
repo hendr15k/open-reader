@@ -1,8 +1,12 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   Moon, Sun, Type, Volume2, BookOpen, Clock,
-  Play, Eye, Smartphone, Globe, Info
+  Play, Eye, Smartphone, Globe, Info, Cpu, Download, Trash2
 } from 'lucide-react';
+import { listEngines, getEngine, onEngineStatus } from '../lib/tts';
+import type { TTSEngine, EngineStatus, EngineVoice } from '../lib/tts/types';
+import type { TTSEngineId } from '../lib/types';
+import { getAudioCacheSize, clearAudioCache } from '../lib/tts/audioCache';
 
 interface SettingsProps {
   onBack: () => void;
@@ -36,18 +40,52 @@ export default function SettingsPage({ onBack, darkMode, onToggleDarkMode }: Set
   const [keepScreenOn, setKeepScreenOn] = useState(() => {
     return localStorage.getItem('open-reader-keep-screen') === 'true';
   });
-  const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
+
+  // — Engine-Auswahl —
+  const allEngines = listEngines();
+  const [selectedEngineId, setSelectedEngineId] = useState<TTSEngineId>(() => {
+    const stored = localStorage.getItem('open-reader-tts-engine') as TTSEngineId | null;
+    return stored || 'web-speech';
+  });
+  const selectedEngine: TTSEngine = getEngine(selectedEngineId);
+
+  const [engineStatus, setEngineStatus] = useState<EngineStatus>(() => ({
+    state: selectedEngine.isReady() ? 'ready' : 'idle',
+  }));
+  const [engineVoices, setEngineVoices] = useState<EngineVoice[]>(() => selectedEngine.listVoices());
   const [previewVoice, setPreviewVoice] = useState<string | null>(null);
+  const [audioCacheInfo, setAudioCacheInfo] = useState<{ count: number; bytes: number }>({ count: 0, bytes: 0 });
 
   useEffect(() => {
-    const loadVoices = () => {
-      const v = window.speechSynthesis.getVoices();
-      if (v.length > 0) setVoices(v);
-    };
-    loadVoices();
-    speechSynthesis.addEventListener('voiceschanged', loadVoices);
-    return () => { speechSynthesis.removeEventListener('voiceschanged', loadVoices); };
+    const unsub = onEngineStatus((id, status) => {
+      if (id === selectedEngineId) {
+        setEngineStatus(status);
+        if (status.state === 'ready') {
+          setEngineVoices(selectedEngine.listVoices());
+        }
+      }
+    });
+    return () => unsub();
+  }, [selectedEngineId, selectedEngine]);
+
+  // Voice-Liste bei Engine-Wechsel neu laden
+  useEffect(() => {
+    setEngineVoices(selectedEngine.listVoices());
+    if (selectedEngineId === 'web-speech' && typeof window !== 'undefined' && 'speechSynthesis' in window) {
+      const handler = () => setEngineVoices(selectedEngine.listVoices());
+      handler();
+      window.speechSynthesis.addEventListener('voiceschanged', handler);
+      return () => window.speechSynthesis.removeEventListener('voiceschanged', handler);
+    }
+    return undefined;
+  }, [selectedEngineId, selectedEngine]);
+
+  // Audio-Cache-Info laden
+  const refreshCacheInfo = useCallback(async () => {
+    const info = await getAudioCacheSize();
+    setAudioCacheInfo(info);
   }, []);
+  useEffect(() => { void refreshCacheInfo(); }, [refreshCacheInfo, selectedEngineId]);
 
   const handleSpeedChange = (speed: number) => {
     setDefaultSpeed(speed);
@@ -57,6 +95,23 @@ export default function SettingsPage({ onBack, darkMode, onToggleDarkMode }: Set
   const handleVoiceChange = (voiceName: string) => {
     setDefaultVoice(voiceName);
     localStorage.setItem('open-reader-tts-voice', voiceName);
+  };
+
+  const handleEngineChange = (id: TTSEngineId) => {
+    setSelectedEngineId(id);
+    localStorage.setItem('open-reader-tts-engine', id);
+    const e = getEngine(id);
+    setEngineStatus({ state: e.isReady() ? 'ready' : 'idle' });
+    setEngineVoices(e.listVoices());
+  };
+
+  const handleActivateEngine = async () => {
+    try {
+      await selectedEngine.init((s) => setEngineStatus(s));
+    } catch (err) {
+      // status ist bereits im error-State
+      console.error('Engine init failed', err);
+    }
   };
 
   const handleFontChange = (font: string) => {
@@ -77,36 +132,33 @@ export default function SettingsPage({ onBack, darkMode, onToggleDarkMode }: Set
   };
 
   const previewVoiceFn = (voiceName: string) => {
-    // Tapping the *same* voice that's already playing → stop it.
-    // Tapping a *different* voice while one is already playing → switch to
-    // the new one (the previous version always cancelled and returned, which
-    // meant the user could never A/B two voices in quick succession).
     if (previewVoice === voiceName) {
-      speechSynthesis.cancel();
+      selectedEngine.speak({ text: 'Hallo, das ist eine Sprachvorschau.', voiceId: voiceName, speed: 1 })
+        .then(h => h.stop()).catch(() => {});
       setPreviewVoice(null);
       return;
     }
-    const voice = voices.find(v => v.name === voiceName);
-    if (!voice) return;
-    // Cancel any in-flight preview before starting the new one.
-    speechSynthesis.cancel();
-    const utterance = new SpeechSynthesisUtterance('Hallo, das ist eine Sprachvorschau.');
-    utterance.voice = voice;
-    utterance.rate = 1;
-    utterance.onend = () => {
-      // Only clear if THIS voice is still the active preview — otherwise a
-      // newer preview has taken over and we shouldn't clobber its state.
-      setPreviewVoice(prev => (prev === voiceName ? null : prev));
-    };
-    utterance.onerror = () => {
-      setPreviewVoice(prev => (prev === voiceName ? null : prev));
-    };
-    speechSynthesis.speak(utterance);
+    // Aktive Vorschau stoppen
+    if (previewVoice) {
+      selectedEngine.speak({ text: '', voiceId: previewVoice, speed: 1 })
+        .then(h => h.stop()).catch(() => {});
+    }
+    const handle = selectedEngine.speak({ text: 'Hallo, das ist eine Sprachvorschau.', voiceId: voiceName, speed: 1 });
+    handle.then(h => {
+      h.finished.then(() => {
+        setPreviewVoice(prev => (prev === voiceName ? null : prev));
+      });
+    }).catch(() => setPreviewVoice(null));
     setPreviewVoice(voiceName);
   };
 
-  const germanVoices = voices.filter(v => v.lang.startsWith('de'));
-  const otherVoices = voices.filter(v => !v.lang.startsWith('de'));
+  const handleClearAudioCache = async () => {
+    await clearAudioCache();
+    void refreshCacheInfo();
+  };
+
+  const germanVoices = engineVoices.filter(v => v.language?.toLowerCase().startsWith('de'));
+  const otherVoices = engineVoices.filter(v => !v.language?.toLowerCase().startsWith('de'));
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
@@ -187,6 +239,119 @@ export default function SettingsPage({ onBack, darkMode, onToggleDarkMode }: Set
             </h2>
           </div>
           <div className="divide-y divide-gray-100 dark:divide-gray-800">
+            {/* — Engine-Auswahl — */}
+            <div className="px-5 py-4">
+              <div className="flex items-center gap-3 mb-4">
+                <Cpu className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
+                <div>
+                  <p className="font-medium text-gray-900 dark:text-white">TTS-Engine</p>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">Lokale KI oder System-Stimmen</p>
+                </div>
+              </div>
+              <div className="space-y-2">
+                {allEngines.map(engine => {
+                  const isActive = selectedEngineId === engine.info.id;
+                  return (
+                    <button
+                      key={engine.info.id}
+                      onClick={() => handleEngineChange(engine.info.id)}
+                      className={`w-full px-4 py-3 rounded-xl border text-left transition-all ${
+                        isActive
+                          ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/30'
+                          : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between mb-1">
+                        <span className={`font-medium text-sm ${isActive ? 'text-indigo-600 dark:text-indigo-400' : 'text-gray-900 dark:text-white'}`}>
+                          {engine.info.name}
+                        </span>
+                        {engine.info.requiresDownload && (
+                          <span className="text-xs text-gray-400 dark:text-gray-500 flex items-center gap-1">
+                            <Download className="w-3 h-3" /> ~{engine.info.modelSizeMB} MB
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed">
+                        {engine.info.description}
+                      </p>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Engine-Status / Aktivierungs-Button */}
+              {(() => {
+                if (engineStatus.state === 'ready') {
+                  return (
+                    <div className="mt-3 flex items-center gap-2 text-xs text-emerald-600 dark:text-emerald-400">
+                      <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                      Bereit{engineStatus.device ? ` · ${engineStatus.device}` : ''}
+                    </div>
+                  );
+                }
+                if (engineStatus.state === 'downloading') {
+                  const pct = Math.round((engineStatus.progress || 0) * 100);
+                  return (
+                    <div className="mt-3">
+                      <div className="flex items-center justify-between text-xs text-indigo-600 dark:text-indigo-400 mb-1">
+                        <span>Modell wird geladen{engineStatus.device ? ` (${engineStatus.device})` : ''}…</span>
+                        <span className="tabular-nums">{pct}%</span>
+                      </div>
+                      <div className="h-2 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-indigo-600 transition-all duration-200"
+                          style={{ width: `${pct}%` }}
+                        />
+                      </div>
+                    </div>
+                  );
+                }
+                if (engineStatus.state === 'error') {
+                  return (
+                    <div className="mt-3 p-3 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800">
+                      <p className="text-xs text-red-600 dark:text-red-400 mb-2">
+                        Fehler: {engineStatus.error || 'Unbekannt'}
+                      </p>
+                      <button
+                        onClick={handleActivateEngine}
+                        className="text-xs px-3 py-1.5 rounded-md bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300 hover:bg-red-200 dark:hover:bg-red-900/60 font-medium"
+                      >
+                        Erneut versuchen
+                      </button>
+                    </div>
+                  );
+                }
+                if (selectedEngineId === 'kokoro-local' && engineStatus.state === 'idle') {
+                  return (
+                    <button
+                      onClick={handleActivateEngine}
+                      className="mt-3 w-full px-3 py-2.5 rounded-xl bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700 flex items-center justify-center gap-2"
+                    >
+                      <Download className="w-4 h-4" />
+                      Kokoro herunterladen & aktivieren
+                    </button>
+                  );
+                }
+                return null;
+              })()}
+
+              {/* Audio-Cache-Info (nur für Audio-Engines relevant) */}
+              {selectedEngineId === 'kokoro-local' && engineStatus.state === 'ready' && (
+                <div className="mt-3 p-3 rounded-lg bg-gray-50 dark:bg-gray-800/50 flex items-center justify-between text-xs">
+                  <span className="text-gray-600 dark:text-gray-400">
+                    Audio-Cache: {audioCacheInfo.count} Sätze · {(audioCacheInfo.bytes / 1024 / 1024).toFixed(1)} MB
+                  </span>
+                  <button
+                    onClick={handleClearAudioCache}
+                    className="text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 flex items-center gap-1"
+                    title="Synthetisierte Sätze aus dem lokalen Cache löschen"
+                  >
+                    <Trash2 className="w-3 h-3" /> Leeren
+                  </button>
+                </div>
+              )}
+            </div>
+
             <div className="px-5 py-4">
               <div className="flex items-center gap-3 mb-4">
                 <Clock className="w-5 h-5 text-gray-500 dark:text-gray-400" />
@@ -234,7 +399,7 @@ export default function SettingsPage({ onBack, darkMode, onToggleDarkMode }: Set
                               : 'bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
                           }`}
                         >
-                          {voice.name.split(' ')[0]} <span className="text-gray-400 text-xs">({voice.lang})</span>
+                          {voice.name.split(' ')[0]} <span className="text-gray-400 text-xs">({voice.language})</span>
                         </button>
                         <button
                           onClick={() => previewVoiceFn(voice.name)}
@@ -261,7 +426,7 @@ export default function SettingsPage({ onBack, darkMode, onToggleDarkMode }: Set
                           : 'bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
                       }`}
                     >
-                      {voice.name.split(' ')[0]} <span className="text-gray-400 text-xs">({voice.lang})</span>
+                      {voice.name.split(' ')[0]} <span className="text-gray-400 text-xs">({voice.language})</span>
                     </button>
                     <button
                       onClick={() => previewVoiceFn(voice.name)}
