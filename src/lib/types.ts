@@ -24,7 +24,7 @@ export interface TTSState {
   sleepTimerRemaining: number | null;
 }
 
-export type TTSEngineId = 'web-speech' | 'kokoro-local';
+export type TTSEngineId = 'web-speech' | 'kokoro-local' | 'piper-local';
 
 export type Tab = 'home' | 'saved' | 'upload' | 'settings';
 

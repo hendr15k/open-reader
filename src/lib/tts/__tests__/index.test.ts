@@ -18,12 +18,13 @@ let listeners: Array<() => void> = [];
   },
 };
 
-test('listEngines() returns exactly the two registered engines, in order', async () => {
+test('listEngines() returns exactly the three registered engines, in order', async () => {
   const { listEngines } = await import('../index');
   const engines = listEngines();
-  assert.strictEqual(engines.length, 2);
-  assert.strictEqual(engines[0].info.id, 'web-speech', 'web-speech first (default)');
-  assert.strictEqual(engines[1].info.id, 'kokoro-local', 'kokoro second');
+  assert.strictEqual(engines.length, 3);
+  assert.strictEqual(engines[0].info.id, 'web-speech',  'web-speech first (default)');
+  assert.strictEqual(engines[1].info.id, 'piper-local',  'piper second (German priority)');
+  assert.strictEqual(engines[2].info.id, 'kokoro-local', 'kokoro third');
 });
 
 test('each engine exposes EngineInfo with required fields', async () => {

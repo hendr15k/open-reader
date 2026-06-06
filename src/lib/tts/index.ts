@@ -1,6 +1,7 @@
 import type { TTSEngine, EngineId, EngineStatus } from './types';
 import { WebSpeechEngine } from './webSpeechEngine';
 import { KokoroLocalEngine } from './kokoroEngine';
+import { PiperLocalEngine } from './piperEngine';
 
 /**
  * Zentrale Engine-Registry. Wird vom useTTS-Hook und von der Settings-UI
@@ -12,8 +13,11 @@ import { KokoroLocalEngine } from './kokoroEngine';
  */
 const engines = new Map<EngineId, TTSEngine>();
 
+/** Die Reihenfolge hier bestimmt die Anzeige-Reihenfolge in der UI. */
+const ORDER: EngineId[] = ['web-speech', 'piper-local', 'kokoro-local'];
+
 export function listEngines(): TTSEngine[] {
-  return [getEngine('web-speech'), getEngine('kokoro-local')];
+  return ORDER.map(getEngine);
 }
 
 export function getEngine(id: EngineId): TTSEngine {
@@ -25,6 +29,9 @@ export function getEngine(id: EngineId): TTSEngine {
       break;
     case 'kokoro-local':
       e = new KokoroLocalEngine();
+      break;
+    case 'piper-local':
+      e = new PiperLocalEngine();
       break;
     default: {
       const exhaustive: never = id;

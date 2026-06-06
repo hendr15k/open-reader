@@ -14,7 +14,7 @@
  *    die Tonhöhe wo möglich
  */
 
-export type EngineId = 'web-speech' | 'kokoro-local';
+export type EngineId = 'web-speech' | 'kokoro-local' | 'piper-local';
 
 export interface EngineInfo {
   id: EngineId;
@@ -41,11 +41,13 @@ export interface EngineVoice {
   traits?: string;
   /** Optional: Qualitätsstufe (A/B/C/...) falls Engine sie mitliefert. */
   quality?: string;
+  /** Optional: Freitext-Hinweis (z.B. '22 MB', 'Hörbuchqualität') — in UI angezeigt. */
+  sample?: string;
 }
 
 export interface EngineStatus {
-  state: 'idle' | 'downloading' | 'ready' | 'error';
-  /** 0..1, nur bei 'downloading'. */
+  state: 'idle' | 'loading' | 'downloading' | 'ready' | 'error';
+  /** 0..1, nur bei 'downloading' / 'loading'. */
   progress?: number;
   /** Bei 'error' die Fehlermeldung. */
   error?: string;
@@ -61,6 +63,8 @@ export interface SpeakOptions {
 }
 
 export interface PlayHandle {
+  /** Eindeutige ID, nützlich fürs Cache-Lookup (engine+id+...). */
+  playHandleId?: string;
   /** Promise, das resolved wenn das Audio zu Ende ist (natürlich oder durch stop()). */
   readonly finished: Promise<void>;
   pause(): void;
