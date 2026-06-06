@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { ReactReader, ReactReaderStyle } from 'react-reader';
 import {
   ChevronLeft, Bookmark, Maximize2, Minimize2, Save,
@@ -44,29 +44,40 @@ export default function EpubReader({ fileId, onClose, title, author }: EpubReade
   const renditionRef = useRef<any>(null);
   const blobUrlRef = useRef<string>('');
   const sleepTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const locationRef = useRef<string>('');
+  // Holds the *raw* EpubLocation object that ReactReader needs as its
+  // `location` prop (it's not a string — it's an object with cfi/ranges).
+  // We persist a stable string version to IndexedDB but pass this through.
+  const rawLocationRef = useRef<any>(null);
 
-  const handleRelocated = (loc: any) => {
-    const locStr = String(loc.start?.href || loc.start || '');
+  const handleRelocated = useCallback((loc: any) => {
+    // epub.js passes a `EpubLocation`-like object on `relocated`. We persist
+    // a stable string for IndexedDB (using `start.href` so it's comparable
+    // across sessions) but also remember the raw object in the ref so React
+    // can pass it back into <ReactReader location={...} />.
+    const locStr = String(loc?.start?.href || loc?.start || '');
     setLocation(locStr);
-    locationRef.current = locStr;
-  };
-  const handleLocationChanged = (loc: any) => {
-    const locStr = String(loc.start?.href || loc.start || '');
-    setLocation(locStr);
-    locationRef.current = locStr;
-  };
+    rawLocationRef.current = loc;
+  }, []);
 
+  // Load saved progress on mount. The string we stored is `start.href`; React
+  // then keeps it in `location` and passes it back into <ReactReader>.
   useEffect(() => {
+    let cancelled = false;
     epubDB.getProgress(fileId).then(progress => {
-      if (progress) setLocation(progress);
+      if (!cancelled && progress) setLocation(progress);
     }).catch(console.error);
+    return () => { cancelled = true; };
   }, [fileId]);
 
+  // Debounced progress save — `locationChanged` fires on every page turn, and
+  // the previous code wrote to IndexedDB on every single event, which is
+  // needlessly expensive.
   useEffect(() => {
-    if (locationRef.current) {
-      epubDB.saveProgress(fileId, locationRef.current).catch(console.error);
-    }
+    if (!location) return;
+    const handle = setTimeout(() => {
+      epubDB.saveProgress(fileId, location).catch(console.error);
+    }, 1000);
+    return () => clearTimeout(handle);
   }, [location, fileId]);
 
   const {
@@ -152,13 +163,15 @@ export default function EpubReader({ fileId, onClose, title, author }: EpubReade
   const handleSave = () => { /* save handled via IndexedDB */ };
 
   const getRendition = (rendition: any) => {
+    // Guard against re-entry: if ReactReader hands us the SAME rendition
+    // instance again, do nothing — otherwise we end up with duplicate
+    // listeners and double state updates.
+    if (renditionRef.current === rendition) return;
     if (renditionRef.current) {
       renditionRef.current.off('relocated', handleRelocated);
-      renditionRef.current.off('locationChanged', handleLocationChanged);
     }
     renditionRef.current = rendition;
     rendition.on('relocated', handleRelocated);
-    rendition.on('locationChanged', handleLocationChanged);
   };
 
   const handlePlayPause = () => {

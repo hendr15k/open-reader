@@ -82,8 +82,21 @@ export async function addUploadedFile(file: any): Promise<void> {
 
 export async function removeArticle(id: string): Promise<void> {
   const database = await getDB();
-  await database.delete('articles', id);
-  await database.delete('files', id);
+  // Fast path: files are keyed by `id`, so a direct get is O(1).
+  const file = await database.get('files', id);
+  if (file) {
+    await database.delete('files', id);
+    return;
+  }
+  // Slow path: URL articles are keyed by `url`, NOT `id`. We have to scan
+  // every article, find the one whose `id` field matches, and delete by its
+  // real key (its `url`). Without this scan, deleting a URL-sourced article
+  // was a silent no-op (and remains a top user complaint).
+  const articles = await database.getAll('articles');
+  const target = articles.find((a: Article) => a.id === id && a.url);
+  if (target?.url) {
+    await database.delete('articles', target.url);
+  }
 }
 
 export async function removeUploadedFile(id: string): Promise<void> {
@@ -146,8 +159,15 @@ export async function getFavoriteArticles(): Promise<string[]> {
 
 export async function toggleFavorite(id: string, isFavorite: boolean): Promise<void> {
   const database = await getDB();
-  const article = await database.get('articles', id);
+  // Files are keyed by `id` — straight lookup works.
   const file = await database.get('files', id);
-  if (article) { await database.put('articles', { ...article, favorite: isFavorite }); }
   if (file) { await database.put('files', { ...file, favorite: isFavorite }); }
+  // URL articles are keyed by `url` — scan to find the one whose `id` field
+  // matches, then update by its real key. Without this, favoriting a URL
+  // article silently did nothing.
+  const articles = await database.getAll('articles');
+  const target = articles.find((a: Article) => a.id === id && a.url);
+  if (target?.url) {
+    await database.put('articles', { ...target, favorite: isFavorite });
+  }
 }

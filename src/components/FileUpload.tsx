@@ -35,8 +35,13 @@ export default function FileUpload({ onFileProcessed }: FileUploadProps) {
         temp.innerHTML = text;
         content = temp.textContent || temp.innerText || text;
       } else if (ext === 'pdf') {
+        // Use `?url` so Vite bundles the matching worker file with a hashed
+        // filename — pinning a CDN URL to a specific version (like the
+        // previous `//cdnjs.../3.11.174/...`) means the worker can drift out
+        // of sync with the library, which we hit on pdfjs-dist 5.x.
         const pdfjsLib = await import('pdfjs-dist');
-        pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js`;
+        const workerSrc = (await import('pdfjs-dist/build/pdf.worker.min.mjs?url')).default;
+        pdfjsLib.GlobalWorkerOptions.workerSrc = workerSrc;
 
         const arrayBuffer = await file.arrayBuffer();
         const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;

@@ -77,17 +77,30 @@ export default function SettingsPage({ onBack, darkMode, onToggleDarkMode }: Set
   };
 
   const previewVoiceFn = (voiceName: string) => {
-    if (previewVoice) {
+    // Tapping the *same* voice that's already playing → stop it.
+    // Tapping a *different* voice while one is already playing → switch to
+    // the new one (the previous version always cancelled and returned, which
+    // meant the user could never A/B two voices in quick succession).
+    if (previewVoice === voiceName) {
       speechSynthesis.cancel();
       setPreviewVoice(null);
       return;
     }
     const voice = voices.find(v => v.name === voiceName);
     if (!voice) return;
+    // Cancel any in-flight preview before starting the new one.
+    speechSynthesis.cancel();
     const utterance = new SpeechSynthesisUtterance('Hallo, das ist eine Sprachvorschau.');
     utterance.voice = voice;
     utterance.rate = 1;
-    utterance.onend = () => setPreviewVoice(null);
+    utterance.onend = () => {
+      // Only clear if THIS voice is still the active preview — otherwise a
+      // newer preview has taken over and we shouldn't clobber its state.
+      setPreviewVoice(prev => (prev === voiceName ? null : prev));
+    };
+    utterance.onerror = () => {
+      setPreviewVoice(prev => (prev === voiceName ? null : prev));
+    };
     speechSynthesis.speak(utterance);
     setPreviewVoice(voiceName);
   };

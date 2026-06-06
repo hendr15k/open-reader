@@ -161,8 +161,8 @@ export function useTTS(initialSentence: number = 0) {
 
   const stop = useCallback(() => {
     speechSynthesis.cancel();
-    if (sleepTimerRef.current) clearTimeout(sleepTimerRef.current);
-    if (sleepTickRef.current) clearInterval(sleepTickRef.current);
+    if (sleepTimerRef.current) { clearTimeout(sleepTimerRef.current); sleepTimerRef.current = null; }
+    if (sleepTickRef.current) { clearInterval(sleepTickRef.current); sleepTickRef.current = null; }
     setState(prev => ({ ...prev, isPlaying: false, isPaused: false, currentSentence: 0, sleepTimerMinutes: null, sleepTimerRemaining: null }));
     _updatePlaybackState(false, false);
   }, [_updatePlaybackState]);
@@ -260,6 +260,8 @@ export function useTTS(initialSentence: number = 0) {
   const setSleepTimer = useCallback((minutes: number | null) => {
     if (sleepTimerRef.current) clearTimeout(sleepTimerRef.current);
     if (sleepTickRef.current) clearInterval(sleepTickRef.current);
+    sleepTimerRef.current = null;
+    sleepTickRef.current = null;
     if (minutes === null) {
       setState(prev => ({ ...prev, sleepTimerMinutes: null, sleepTimerRemaining: null }));
       return;
@@ -270,6 +272,11 @@ export function useTTS(initialSentence: number = 0) {
     }, 1000);
     sleepTimerRef.current = setTimeout(() => {
       speechSynthesis.cancel();
+      // CRITICAL: clear the tick interval here too — without this it kept
+      // running forever, decrementing the (now-null) remaining counter on
+      // every tick.
+      if (sleepTickRef.current) { clearInterval(sleepTickRef.current); sleepTickRef.current = null; }
+      if (sleepTimerRef.current) { clearTimeout(sleepTimerRef.current); sleepTimerRef.current = null; }
       setState(prev => ({ ...prev, isPlaying: false, isPaused: false, sleepTimerMinutes: null, sleepTimerRemaining: null }));
       _updatePlaybackState(false, false);
     }, minutes * 60 * 1000);
