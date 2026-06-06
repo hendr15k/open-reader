@@ -321,14 +321,17 @@ export default function SettingsPage({ onBack, darkMode, onToggleDarkMode }: Set
                     </div>
                   );
                 }
-                if (selectedEngineId === 'kokoro-local' && engineStatus.state === 'idle') {
+                if ((selectedEngineId === 'kokoro-local' || selectedEngineId === 'piper-local') && engineStatus.state === 'idle') {
+                  const label = selectedEngineId === 'piper-local'
+                    ? 'Piper herunterladen & aktivieren'
+                    : 'Kokoro herunterladen & aktivieren';
                   return (
                     <button
                       onClick={handleActivateEngine}
                       className="mt-3 w-full px-3 py-2.5 rounded-xl bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700 flex items-center justify-center gap-2"
                     >
                       <Download className="w-4 h-4" />
-                      Kokoro herunterladen & aktivieren
+                      {label}
                     </button>
                   );
                 }
@@ -336,7 +339,7 @@ export default function SettingsPage({ onBack, darkMode, onToggleDarkMode }: Set
               })()}
 
               {/* Audio-Cache-Info (nur für Audio-Engines relevant) */}
-              {selectedEngineId === 'kokoro-local' && engineStatus.state === 'ready' && (
+              {(selectedEngineId === 'kokoro-local' || selectedEngineId === 'piper-local') && engineStatus.state === 'ready' && (
                 <div className="mt-3 p-3 rounded-lg bg-gray-50 dark:bg-gray-800/50 flex items-center justify-between text-xs">
                   <span className="text-gray-600 dark:text-gray-400">
                     Audio-Cache: {audioCacheInfo.count} Sätze · {(audioCacheInfo.bytes / 1024 / 1024).toFixed(1)} MB
