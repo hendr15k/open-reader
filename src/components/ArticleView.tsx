@@ -3,7 +3,7 @@ import {
   Play, Pause, Square, Save, ChevronLeft,
   SkipBack, SkipForward, Moon, Timer, Maximize2, Minimize2, Bookmark, BookOpen, Download
 } from 'lucide-react';
-import { Article } from '../lib/types';
+import { Article, TTSEngineId } from '../lib/types';
 import { useTTS } from '../hooks/useTTS';
 import { useChapters } from '../hooks/useChapters';
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
@@ -26,6 +26,11 @@ const FONT_SIZES = [
 
 const SPEED_OPTIONS = [0.5, 0.75, 1, 1.25, 1.5, 1.75, 2];
 
+function getStoredEngineId(): TTSEngineId {
+  const stored = localStorage.getItem('open-reader-tts-engine') as TTSEngineId | null;
+  return stored || 'web-speech';
+}
+
 export default function ArticleView({ article, onClose, onSave, isSaved }: ArticleViewProps) {
   const initialProgress = (() => {
     const saved = localStorage.getItem(`open-reader-progress-${article.id}`);
@@ -35,7 +40,7 @@ export default function ArticleView({ article, onClose, onSave, isSaved }: Artic
     }
     return 0;
   })();
-  const { state, voices, speak, pause, resume, stop, setSpeed, setVoice, setCurrentSentence, setSleepTimer, skipForward, skipBack, jumpToSentence } = useTTS(initialProgress);
+  const { state, voices, speak, pause, resume, stop, setSpeed, setVoice, setCurrentSentence, setSleepTimer, skipForward, skipBack, jumpToSentence } = useTTS(initialProgress, getStoredEngineId());
   const { chapters, activeChapter, setActiveChapter, showSidebar, setShowSidebar } = useChapters(article.content);
   const contentRef = useRef<HTMLDivElement>(null);
   const [fontSizeIndex, setFontSizeIndex] = useState(() => {
@@ -374,7 +379,7 @@ export default function ArticleView({ article, onClose, onSave, isSaved }: Artic
               </div>
             )}
           </div>
-          <select value={state.selectedVoice || ''} onChange={(e) => setVoice(e.target.value)} className={`px-3 py-2 rounded-xl ${sleepMode ? 'bg-gray-800 text-gray-400' : 'bg-gray-100/80 dark:bg-gray-800/80 text-gray-700 dark:text-gray-300'} text-xs font-medium border border-gray-200/50 dark:border-gray-700/50 max-w-32 truncate`}><option value="">Stimme</option>{voices.filter(v => v.lang.startsWith('de')).slice(0, 3).map(v => <option key={v.name} value={v.name}>{v.name.split(' ')[0]}</option>)}{voices.filter(v => !v.lang.startsWith('de')).slice(0, 3).map(v => <option key={v.name} value={v.name}>{v.name.split(' ')[0]}</option>)}</select>
+          <select value={state.selectedVoice || ''} onChange={(e) => setVoice(e.target.value)} className={`px-3 py-2 rounded-xl ${sleepMode ? 'bg-gray-800 text-gray-400' : 'bg-gray-100/80 dark:bg-gray-800/80 text-gray-700 dark:text-gray-300'} text-xs font-medium border border-gray-200/50 dark:border-gray-700/50 max-w-32 truncate`}><option value="">Stimme</option>{voices.filter(v => v.language.startsWith('de')).slice(0, 3).map(v => <option key={v.name} value={v.name}>{v.name.split(' ')[0]}</option>)}{voices.filter(v => !v.language.startsWith('de')).slice(0, 3).map(v => <option key={v.name} value={v.name}>{v.name.split(' ')[0]}</option>)}</select>
         </div>
       </div>
 

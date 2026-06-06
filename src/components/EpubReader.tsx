@@ -7,6 +7,12 @@ import {
 } from 'lucide-react';
 import { epubDB } from '../lib/epubDB';
 import { useTTS } from '../hooks/useTTS';
+import type { TTSEngineId } from '../lib/types';
+
+function getStoredEngineId(): TTSEngineId {
+  const stored = localStorage.getItem('open-reader-tts-engine') as TTSEngineId | null;
+  return stored || 'web-speech';
+}
 
 interface EpubReaderProps {
   fileId: string;
@@ -91,7 +97,7 @@ export default function EpubReader({ fileId, onClose, title, author }: EpubReade
     setVoice: ttsSetVoice,
     skipForward: ttsSkipForward,
     skipBack: ttsSkipBack,
-  } = useTTS();
+  } = useTTS(0, getStoredEngineId());
 
   // Load bookmarks
   useEffect(() => {
@@ -323,8 +329,8 @@ export default function EpubReader({ fileId, onClose, title, author }: EpubReade
             className={`px-3 py-1.5 rounded-lg text-xs max-w-36 truncate ${sleepMode ? 'bg-gray-800 text-gray-400' : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300'} border border-gray-200/50 dark:border-gray-700/50`}
           >
             <option value="">Stimme</option>
-            {voices.filter(v => v.lang.startsWith('de')).slice(0, 3).map(v => <option key={v.name} value={v.name}>{v.name.split(' ')[0]}</option>)}
-            {voices.filter(v => !v.lang.startsWith('de')).slice(0, 3).map(v => <option key={v.name} value={v.name}>{v.name.split(' ')[0]}</option>)}
+            {voices.filter(v => v.language.startsWith('de')).slice(0, 3).map(v => <option key={v.name} value={v.name}>{v.name.split(' ')[0]}</option>)}
+            {voices.filter(v => !v.language.startsWith('de')).slice(0, 3).map(v => <option key={v.name} value={v.name}>{v.name.split(' ')[0]}</option>)}
           </select>
         </div>
 
