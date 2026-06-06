@@ -36,7 +36,7 @@
     "@vitejs/plugin-react": "^4.0.0",
     "autoprefixer": "^10.4.18",
     "esmock": "^2.7.3",
-    "postcss": "^8.4.35",
+    "postcss": "^8.5.15",
     "tailwind-scrollbar-hide": "^4.0.0",
     "tailwindcss": "^3.4.1",
     "tsx": "^4.22.4",
