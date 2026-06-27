@@ -101,7 +101,7 @@ export default function ArticleView({ article, onClose, onSave, isSaved }: Artic
       state.isPlaying &&
       !state.isPaused
     ) {
-      speak(chapterContent, state.currentSentence > 0 ? state.currentSentence : undefined);
+speak(chapterContent);
     }
     // We intentionally exclude `speak` and `state.currentSentence` from deps:
     // we only want to re-speak when the chapter content itself changes.
@@ -377,7 +377,7 @@ export default function ArticleView({ article, onClose, onSave, isSaved }: Artic
               </div>
             )}
           </div>
-          <select value={state.selectedVoice || ''} onChange={(e) => setVoice(e.target.value)} className={`px-3 py-2 rounded-xl ${sleepMode ? 'bg-gray-800 text-gray-400' : 'bg-gray-100/80 dark:bg-gray-800/80 text-gray-700 dark:text-gray-300'} text-xs font-medium border border-gray-200/50 dark:border-gray-700/50 max-w-32 truncate`}><option value="">Stimme</option>{voices.filter(v => v.language.startsWith('de')).slice(0, 3).map(v => <option key={v.name} value={v.name}>{v.name.split(' ')[0]}</option>)}{voices.filter(v => !v.language.startsWith('de')).slice(0, 3).map(v => <option key={v.name} value={v.name}>{v.name.split(' ')[0]}</option>)}</select>
+          <select value={state.selectedVoice || ''} onChange={(e) => setVoice(e.target.value)} className={`px-3 py-2 rounded-xl ${sleepMode ? 'bg-gray-800 text-gray-400' : 'bg-gray-100/80 dark:bg-gray-800/80 text-gray-700 dark:text-gray-300'} text-xs font-medium border border-gray-200/50 dark:border-gray-700/50 max-w-32 truncate`}><option value="">Stimme</option>{voices.filter(v => v.language.startsWith('de')).slice(0, 3).map(v => <option key={v.id} value={v.id}>{v.name.split(' ')[0]}</option>)}{voices.filter(v => !v.language.startsWith('de')).slice(0, 3).map(v => <option key={v.id} value={v.id}>{v.name.split(' ')[0]}</option>)}</select>
         </div>
       </div>
 

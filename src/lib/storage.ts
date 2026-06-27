@@ -4,32 +4,31 @@ import type { Article, Bookmark } from './types';
 const DB_NAME = 'open-reader-db';
 const DB_VERSION = 3;
 
-let db: IDBPDatabase | null = null;
+let dbPromise: Promise<IDBPDatabase> | null = null;
 
 async function getDB(): Promise<IDBPDatabase> {
-  if (db) return db;
-
-  db = await openDB(DB_NAME, DB_VERSION, {
-    upgrade(database, oldVersion) {
-      if (oldVersion < 1) {
-        if (!database.objectStoreNames.contains('articles')) {
-          database.createObjectStore('articles', { keyPath: 'url' });
+  if (!dbPromise) {
+    dbPromise = openDB(DB_NAME, DB_VERSION, {
+      upgrade(database, oldVersion) {
+        if (oldVersion < 1) {
+          if (!database.objectStoreNames.contains('articles')) {
+            database.createObjectStore('articles', { keyPath: 'url' });
+          }
         }
-      }
-      if (oldVersion < 2) {
-        if (!database.objectStoreNames.contains('files')) {
-          database.createObjectStore('files', { keyPath: 'id' });
+        if (oldVersion < 2) {
+          if (!database.objectStoreNames.contains('files')) {
+            database.createObjectStore('files', { keyPath: 'id' });
+          }
         }
-      }
-      if (oldVersion < 3) {
-        if (!database.objectStoreNames.contains('bookmarks')) {
-          database.createObjectStore('bookmarks', { keyPath: 'id' });
+        if (oldVersion < 3) {
+          if (!database.objectStoreNames.contains('bookmarks')) {
+            database.createObjectStore('bookmarks', { keyPath: 'id' });
+          }
         }
-      }
-    },
-  });
-
-  return db;
+      },
+    }).catch(e => { dbPromise = null; throw e; });
+  }
+  return dbPromise;
 }
 
 export async function getAllArticles(): Promise<Article[]> {

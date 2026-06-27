@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Moon, Sun, Type, Volume2, BookOpen, Clock,
   Play, Eye, Smartphone, Globe, Info, Cpu, Download, Trash2
@@ -40,6 +40,7 @@ export default function SettingsPage({ onBack, darkMode, onToggleDarkMode }: Set
   const [keepScreenOn, setKeepScreenOn] = useState(() => {
     return localStorage.getItem('open-reader-keep-screen') === 'true';
   });
+  const wakeLockRef = useRef<{ release: () => Promise<void> } | null>(null);
 
   // — Engine-Auswahl —
   const allEngines = listEngines();
@@ -54,6 +55,7 @@ export default function SettingsPage({ onBack, darkMode, onToggleDarkMode }: Set
   }));
   const [engineVoices, setEngineVoices] = useState<EngineVoice[]>(() => selectedEngine.listVoices());
   const [previewVoice, setPreviewVoice] = useState<string | null>(null);
+  const previewHandleRef = useRef<{ stop: () => void } | null>(null);
   const [audioCacheInfo, setAudioCacheInfo] = useState<{ count: number; bytes: number }>({ count: 0, bytes: 0 });
 
   useEffect(() => {
@@ -92,9 +94,9 @@ export default function SettingsPage({ onBack, darkMode, onToggleDarkMode }: Set
     localStorage.setItem('open-reader-default-speed', String(speed));
   };
 
-  const handleVoiceChange = (voiceName: string) => {
-    setDefaultVoice(voiceName);
-    localStorage.setItem('open-reader-tts-voice', voiceName);
+  const handleVoiceChange = (voiceId: string) => {
+    setDefaultVoice(voiceId);
+    localStorage.setItem('open-reader-tts-voice', voiceId);
   };
 
   const handleEngineChange = (id: TTSEngineId) => {
@@ -125,31 +127,43 @@ export default function SettingsPage({ onBack, darkMode, onToggleDarkMode }: Set
     localStorage.setItem('open-reader-autoplay', String(newVal));
   };
 
-  const handleKeepScreenToggle = () => {
+  const handleKeepScreenToggle = async () => {
     const newVal = !keepScreenOn;
     setKeepScreenOn(newVal);
     localStorage.setItem('open-reader-keep-screen', String(newVal));
+    try {
+      if (newVal && 'wakeLock' in navigator) {
+        wakeLockRef.current = await (navigator as Navigator & {
+          wakeLock: { request: (t: string) => Promise<{ release: () => Promise<void> }> };
+        }).wakeLock.request('screen');
+      } else if (!newVal && wakeLockRef.current) {
+        await wakeLockRef.current.release();
+        wakeLockRef.current = null;
+      }
+    } catch { /* WakeLock not supported */ }
   };
 
-  const previewVoiceFn = (voiceName: string) => {
-    if (previewVoice === voiceName) {
-      selectedEngine.speak({ text: 'Hallo, das ist eine Sprachvorschau.', voiceId: voiceName, speed: 1 })
-        .then(h => h.stop()).catch(() => {});
+  const previewVoiceFn = (voiceId: string) => {
+    if (previewVoice === voiceId) {
+      previewHandleRef.current?.stop();
+      previewHandleRef.current = null;
       setPreviewVoice(null);
       return;
     }
-    // Aktive Vorschau stoppen
-    if (previewVoice) {
-      selectedEngine.speak({ text: '', voiceId: previewVoice, speed: 1 })
-        .then(h => h.stop()).catch(() => {});
+    if (previewHandleRef.current) {
+      previewHandleRef.current.stop();
+      previewHandleRef.current = null;
     }
-    const handle = selectedEngine.speak({ text: 'Hallo, das ist eine Sprachvorschau.', voiceId: voiceName, speed: 1 });
-    handle.then(h => {
-      h.finished.then(() => {
-        setPreviewVoice(prev => (prev === voiceName ? null : prev));
-      });
-    }).catch(() => setPreviewVoice(null));
-    setPreviewVoice(voiceName);
+    setPreviewVoice(voiceId);
+    selectedEngine.speak({ text: 'Hallo, das ist eine Sprachvorschau.', voiceId, speed: 1 })
+      .then(h => {
+        previewHandleRef.current = h;
+        h.finished.then(() => {
+          setPreviewVoice(prev => (prev === voiceId ? null : prev));
+          previewHandleRef.current = null;
+        });
+      })
+      .catch(() => setPreviewVoice(null));
   };
 
   const handleClearAudioCache = async () => {
@@ -393,11 +407,11 @@ export default function SettingsPage({ onBack, darkMode, onToggleDarkMode }: Set
                   <>
                     <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Deutsch</p>
                     {germanVoices.map(voice => (
-                      <div key={voice.name} className="flex items-center gap-2">
+                      <div key={voice.id} className="flex items-center gap-2">
                         <button
-                          onClick={() => handleVoiceChange(voice.name)}
+                          onClick={() => handleVoiceChange(voice.id)}
                           className={`flex-1 px-3 py-2 rounded-lg text-sm text-left transition-all ${
-                            defaultVoice === voice.name
+                            defaultVoice === voice.id
                               ? 'bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400 font-medium'
                               : 'bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
                           }`}
@@ -405,14 +419,14 @@ export default function SettingsPage({ onBack, darkMode, onToggleDarkMode }: Set
                           {voice.name.split(' ')[0]} <span className="text-gray-400 text-xs">({voice.language})</span>
                         </button>
                         <button
-                          onClick={() => previewVoiceFn(voice.name)}
+                          onClick={() => previewVoiceFn(voice.id)}
                           className={`px-3 py-2 rounded-lg text-xs font-medium transition-all ${
-                            previewVoice === voice.name
+                            previewVoice === voice.id
                               ? 'bg-red-100 dark:bg-red-900/50 text-red-600 dark:text-red-400'
                               : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
                           }`}
                         >
-                          {previewVoice === voice.name ? 'Stop' : 'Play'}
+                          {previewVoice === voice.id ? 'Stop' : 'Play'}
                         </button>
                       </div>
                     ))}
@@ -420,11 +434,11 @@ export default function SettingsPage({ onBack, darkMode, onToggleDarkMode }: Set
                 )}
                 <p className="text-xs text-gray-500 dark:text-gray-400 font-medium mt-3">Other</p>
                 {otherVoices.slice(0, 5).map(voice => (
-                  <div key={voice.name} className="flex items-center gap-2">
+                  <div key={voice.id} className="flex items-center gap-2">
                     <button
-                      onClick={() => handleVoiceChange(voice.name)}
+                      onClick={() => handleVoiceChange(voice.id)}
                       className={`flex-1 px-3 py-2 rounded-lg text-sm text-left transition-all ${
-                        defaultVoice === voice.name
+                        defaultVoice === voice.id
                           ? 'bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400 font-medium'
                           : 'bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
                       }`}
@@ -432,14 +446,14 @@ export default function SettingsPage({ onBack, darkMode, onToggleDarkMode }: Set
                       {voice.name.split(' ')[0]} <span className="text-gray-400 text-xs">({voice.language})</span>
                     </button>
                     <button
-                      onClick={() => previewVoiceFn(voice.name)}
+                      onClick={() => previewVoiceFn(voice.id)}
                       className={`px-3 py-2 rounded-lg text-xs font-medium transition-all ${
-                        previewVoice === voice.name
+                        previewVoice === voice.id
                           ? 'bg-red-100 dark:bg-red-900/50 text-red-600 dark:text-red-400'
                           : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
                       }`}
                     >
-                      {previewVoice === voice.name ? 'Stop' : 'Play'}
+                      {previewVoice === voice.id ? 'Stop' : 'Play'}
                     </button>
                   </div>
                 ))}

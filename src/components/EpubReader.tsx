@@ -50,6 +50,8 @@ export default function EpubReader({ fileId, onClose, title, author }: EpubReade
   const renditionRef = useRef<any>(null);
   const blobUrlRef = useRef<string>('');
   const sleepTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const latestLocationRef = useRef<string>('');
+  latestLocationRef.current = location;
   // Holds the *raw* EpubLocation object that ReactReader needs as its
   // `location` prop (it's not a string — it's an object with cfi/ranges).
   // We persist a stable string version to IndexedDB but pass this through.
@@ -114,22 +116,19 @@ export default function EpubReader({ fileId, onClose, title, author }: EpubReade
         const blob = new Blob([epub.content], { type: 'application/epub+zip' });
         const url = URL.createObjectURL(blob);
         if (cancelled) { URL.revokeObjectURL(url); return; }
-        setEpubContent(url);
+        if (blobUrlRef.current) URL.revokeObjectURL(blobUrlRef.current);
         blobUrlRef.current = url;
+        setEpubContent(url);
       }
     }).catch(console.error);
-    return () => { cancelled = true; };
-  }, [fileId]);
-
-  // Cleanup blob URL on unmount
-  useEffect(() => {
     return () => {
+      cancelled = true;
       if (blobUrlRef.current) {
         URL.revokeObjectURL(blobUrlRef.current);
         blobUrlRef.current = '';
       }
     };
-  }, []);
+  }, [fileId]);
 
   // Sleep timer
   useEffect(() => {
@@ -139,22 +138,34 @@ export default function EpubReader({ fileId, onClose, title, author }: EpubReade
       setSleepMode(true);
       sleepTimerRef.current = setInterval(() => {
         setSleepRemaining(prev => {
-          if (prev === null || prev <= 1) {
-            if (sleepTimerRef.current) clearInterval(sleepTimerRef.current);
-            ttsStop();
-            setSleepMode(false);
-            setSleepMinutes(null);
-            return null;
-          }
+          if (prev === null) return null;
+          if (prev <= 1) return 0;
           return prev - 1;
         });
       }, 1000);
     }
     return () => { if (sleepTimerRef.current) clearInterval(sleepTimerRef.current); };
-  }, [sleepMinutes, ttsStop]);
+  }, [sleepMinutes]);
+
+  useEffect(() => {
+    if (sleepRemaining === 0) {
+      if (sleepTimerRef.current) { clearInterval(sleepTimerRef.current); sleepTimerRef.current = null; }
+      ttsStop();
+      setSleepMode(false);
+      setSleepMinutes(null);
+      setSleepRemaining(null);
+    }
+  }, [sleepRemaining, ttsStop]);
 
   // Cleanup TTS on unmount
-  useEffect(() => { return () => { ttsStop(); }; }, []);
+  useEffect(() => {
+    return () => {
+      ttsStop();
+      if (latestLocationRef.current) {
+        epubDB.saveProgress(fileId, latestLocationRef.current).catch(console.error);
+      }
+    };
+  }, []);
 
   const toggleBookmark = () => {
     const loc = String(location);
@@ -345,8 +356,8 @@ export default function EpubReader({ fileId, onClose, title, author }: EpubReade
             className={`px-3 py-1.5 rounded-lg text-xs max-w-36 truncate ${sleepMode ? 'bg-gray-800 text-gray-400' : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300'} border border-gray-200/50 dark:border-gray-700/50`}
           >
             <option value="">Stimme</option>
-            {voices.filter(v => v.language.startsWith('de')).slice(0, 3).map(v => <option key={v.name} value={v.name}>{v.name.split(' ')[0]}</option>)}
-            {voices.filter(v => !v.language.startsWith('de')).slice(0, 3).map(v => <option key={v.name} value={v.name}>{v.name.split(' ')[0]}</option>)}
+            {voices.filter(v => v.language.startsWith('de')).slice(0, 3).map(v => <option key={v.id} value={v.id}>{v.name.split(' ')[0]}</option>)}
+            {voices.filter(v => !v.language.startsWith('de')).slice(0, 3).map(v => <option key={v.id} value={v.id}>{v.name.split(' ')[0]}</option>)}
           </select>
         </div>
 

@@ -165,7 +165,15 @@ export class PiperLocalEngine implements TTSEngine {
 
     // Pre-Synthese: Modell wird automatisch vom Provider gefetcht; das
     // kann beim ersten Satz einer Voice 5-20 s dauern (~22 MB).
-    const voiceId = opts.voiceId || this.listVoices().find(v => v.language?.toLowerCase().startsWith('de'))?.id || 'de_DE-thorsten-medium';
+    // Find voice matching the provided id, falling back to first German or default
+    let voiceId = opts.voiceId;
+    if (!voiceId) {
+      const german = this.listVoices().find(v => v.language?.toLowerCase().startsWith('de'));
+      voiceId = german?.id || 'de_DE-thorsten-medium';
+    }
+    // Ensure it's a valid voice id (in case v.name was stored)
+    const validVoice = this.listVoices().find(v => v.id === voiceId);
+    if (validVoice) voiceId = validVoice.id;
 
     type EngineLike = { generate: (text: string, voice: string, speaker?: number) => Promise<{ file: Blob; duration: number; phonemeData?: unknown }> };
     const engine = engineInstance as EngineLike;
@@ -178,9 +186,9 @@ export class PiperLocalEngine implements TTSEngine {
     // auf `ended` warten.
     const url = URL.createObjectURL(response.file);
     const audio = new Audio(url);
-    if (opts.speed !== undefined && opts.speed !== 1) {
-      audio.playbackRate = Math.max(0.1, Math.min(10, opts.speed));
-    }
+    // Use opt.speed for playbackRate, but clamp to valid range
+    const speed = opts.speed !== undefined ? Math.max(0.1, Math.min(10, opts.speed)) : 1;
+    audio.playbackRate = speed;
 
     const handle: PlayHandle = {
       playHandleId: crypto.randomUUID(),

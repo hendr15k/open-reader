@@ -44,6 +44,12 @@ export function useTTS(initialSentence: number = 0, engineId: TTSEngineId = 'web
     sleepTimerRemaining: null,
   }));
 
+  // Refs that mirror state for reading inside stable callbacks (playFrom).
+  // Updated synchronously whenever the corresponding state changes.
+  const sentencesRef = useRef<string[]>(state.sentences);
+  const voiceRef = useRef<string | null>(state.selectedVoice);
+  const speedRef = useRef<number>(state.speed);
+
   const [engineReady, setEngineReady] = useState(() => engineRef.current.isReady());
   // Re-Mount bei Engine-Wechsel: aktives Handle invalidieren
   useEffect(() => {
@@ -126,7 +132,7 @@ export function useTTS(initialSentence: number = 0, engineId: TTSEngineId = 'web
   const playFrom = useCallback(
     async (fromIndex: number) => {
       const runId = ++runIdRef.current;
-      const sentences = state.sentences;
+      const sentences = sentencesRef.current;
       if (sentences.length === 0) return;
 
       let engine: TTSEngine;
@@ -137,7 +143,7 @@ export function useTTS(initialSentence: number = 0, engineId: TTSEngineId = 'web
         return;
       }
 
-      const voiceId = state.selectedVoice || engine.listVoices()[0]?.id;
+      const voiceId = voiceRef.current || engine.listVoices()[0]?.id;
       if (!voiceId) {
         // Keine Stimme verfügbar (extrem unwahrscheinlich, aber sauber abfangen)
         return;
@@ -147,7 +153,7 @@ export function useTTS(initialSentence: number = 0, engineId: TTSEngineId = 'web
         if (runId !== runIdRef.current) return;
         setState(p => ({ ...p, currentSentence: i, isPlaying: true, isPaused: false }));
 
-        const handle = await speakSentence(engine, sentences[i], voiceId, state.speed, runId);
+        const handle = await speakSentence(engine, sentences[i], voiceId, speedRef.current, runId);
         if (!handle || runId !== runIdRef.current) {
           if (handle) handle.stop();
           return;
@@ -171,7 +177,7 @@ export function useTTS(initialSentence: number = 0, engineId: TTSEngineId = 'web
         setState(p => ({ ...p, isPlaying: false, isPaused: false }));
       }
     },
-    [state.sentences, state.selectedVoice, state.speed, ensureEngineReady, speakSentence]
+    [ensureEngineReady, speakSentence]
   );
 
   // — Public API —
@@ -179,6 +185,7 @@ export function useTTS(initialSentence: number = 0, engineId: TTSEngineId = 'web
   const speak = useCallback(
     (text: string, startIndex?: number) => {
       const sentences = splitSentences(text);
+      sentencesRef.current = sentences;
       if (sentences.length === 0) {
         setState(p => ({ ...p, sentences: [], currentSentence: 0, isPlaying: false, isPaused: false }));
         return;
@@ -215,13 +222,15 @@ export function useTTS(initialSentence: number = 0, engineId: TTSEngineId = 'web
   const setSpeed = useCallback((speed: number) => {
     const clamped = Math.max(0.5, Math.min(2, speed));
     localStorage.setItem('open-reader-tts-speed', String(clamped));
+    speedRef.current = clamped;
     currentHandle.current?.setSpeed(clamped);
     setState(p => ({ ...p, speed: clamped }));
   }, []);
 
-  const setVoice = useCallback((voiceName: string) => {
-    localStorage.setItem('open-reader-tts-voice', voiceName);
-    setState(p => ({ ...p, selectedVoice: voiceName }));
+  const setVoice = useCallback((voiceId: string) => {
+    localStorage.setItem('open-reader-tts-voice', voiceId);
+    voiceRef.current = voiceId;
+    setState(p => ({ ...p, selectedVoice: voiceId }));
   }, []);
 
   const setCurrentSentence = useCallback((idx: number) => {

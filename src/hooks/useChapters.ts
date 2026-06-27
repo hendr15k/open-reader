@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 
 export interface Chapter {
   id: number;
@@ -11,7 +11,7 @@ export interface Chapter {
 export function parseChapters(content: string): Chapter[] {
   const lines = content.split('\n');
   const chapters: Chapter[] = [];
-  const headingRe = /^(#{1,6}\s+|Chapter\s|Kapitel\s)/i;
+  const headingRe = /^(#{1,6}\s+|(?:Chapter|Kapitel)\s+(?:\d+|[IVXLCDM]+))/i;
   const chapterTitleRe = /^(?:Chapter|Kapitel)\s+/i;
   let currentStart = 0;
 
@@ -67,6 +67,7 @@ export function useChapters(content: string) {
   const chapters = useMemo(() => parseChapters(content), [content]);
   const [activeChapter, setActiveChapter] = useState(0);
   const [showSidebar, setShowSidebar] = useState(false);
+  useEffect(() => { setActiveChapter(0); }, [content]);
 
   const hasChapters = chapters.length > 1;
 

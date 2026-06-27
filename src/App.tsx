@@ -155,6 +155,7 @@ export default function App() {
     try {
       await removeArticle(id);
       if (currentArticle?.id === id) {
+        setCurrentArticle(null);
         setIsSaved(false);
       }
       reload();

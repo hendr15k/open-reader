@@ -130,9 +130,19 @@ export class KokoroLocalEngine implements TTSEngine {
     if (!this.tts) {
       throw new Error('Kokoro engine not initialized. Call init() first.');
     }
+    // Find voice matching the provided id, falling back to first German or default
+    let voiceId = opts.voiceId;
+    if (!voiceId) {
+      const german = this.listVoices().find(v => v.language?.toLowerCase().startsWith('de'));
+      voiceId = german?.id || 'af_heart'; // Kokoro default
+    }
+    // Ensure it's a valid voice id (in case v.name was stored)
+    const validVoice = this.listVoices().find(v => v.id === voiceId);
+    if (validVoice) voiceId = validVoice.id;
+    
     this.currentSpeed = clamp(opts.speed, 0.5, 2);
     const raw = await this.tts.generate(opts.text, {
-      voice: opts.voiceId,
+      voice: voiceId,
       speed: this.currentSpeed,
     });
 
