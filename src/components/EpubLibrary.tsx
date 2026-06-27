@@ -37,8 +37,6 @@ export default function EpubLibrary({ onOpenEpub, onBack }: EpubLibraryProps) {
   const [search, setSearch] = useState('');
   const [deleting, setDeleting] = useState<string | null>(null);
 
-  useEffect(() => { loadFiles(); }, []);
-
   const loadFiles = async () => {
     setLoading(true);
     try {
@@ -50,6 +48,8 @@ export default function EpubLibrary({ onOpenEpub, onBack }: EpubLibraryProps) {
       setLoading(false);
     }
   };
+
+  useEffect(() => { loadFiles(); }, []);
 
   const handleDelete = async (id: string, title: string) => {
     if (!confirm(`${title} wirklich löschen?`)) return;

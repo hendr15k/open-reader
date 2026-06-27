@@ -106,16 +106,19 @@ export default function EpubReader({ fileId, onClose, title, author }: EpubReade
     }).catch(console.error);
   }, [fileId]);
 
-  // Load EPUB
   useEffect(() => {
+    let cancelled = false;
     epubDB.getFile(fileId).then(epub => {
+      if (cancelled) return;
       if (epub?.content) {
         const blob = new Blob([epub.content], { type: 'application/epub+zip' });
         const url = URL.createObjectURL(blob);
+        if (cancelled) { URL.revokeObjectURL(url); return; }
         setEpubContent(url);
         blobUrlRef.current = url;
       }
     }).catch(console.error);
+    return () => { cancelled = true; };
   }, [fileId]);
 
   // Cleanup blob URL on unmount
@@ -188,6 +191,19 @@ export default function EpubReader({ fileId, onClose, title, author }: EpubReade
     } else if (ttsState.sentences.length > 0) {
       const remaining = ttsState.sentences.slice(ttsState.currentSentence).join(' ');
       if (remaining) speak(remaining);
+    } else {
+      const rendition = renditionRef.current;
+      if (rendition) {
+        try {
+          const contents = rendition.getContents();
+          if (contents && contents.length > 0) {
+            const text = contents.map((c: any) => c.window.document.body.innerText).filter(Boolean).join('\n');
+            if (text.trim()) speak(text);
+          }
+        } catch (e) {
+          console.error('Failed to extract EPUB text:', e);
+        }
+      }
     }
   };
 

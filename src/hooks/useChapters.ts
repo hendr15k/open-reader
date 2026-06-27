@@ -11,18 +11,23 @@ export interface Chapter {
 export function parseChapters(content: string): Chapter[] {
   const lines = content.split('\n');
   const chapters: Chapter[] = [];
-  const headingRe = /^(#{1,3}\s+|Chapter\s|Kapitel\s)/i;
+  const headingRe = /^(#{1,6}\s+|Chapter\s|Kapitel\s)/i;
+  const chapterTitleRe = /^(?:Chapter|Kapitel)\s+/i;
   let currentStart = 0;
+
+  function extractChapterTitle(lines: string[]): string | null {
+    const h = lines.find(l => l.trim().startsWith('#'));
+    if (h) return h.replace(/^#+\s*/, '').trim();
+    const c = lines.find(l => chapterTitleRe.test(l.trim()));
+    if (c) return c.replace(chapterTitleRe, '').trim();
+    return null;
+  }
 
   for (let i = 0; i < lines.length; i++) {
     if (i > 0 && headingRe.test(lines[i].trim())) {
-      // Close previous chapter
       if (currentStart < i) {
         const chapterLines = lines.slice(currentStart, i);
-        const firstHeading = chapterLines.find(l => l.trim().startsWith('#'));
-        const title = firstHeading
-          ? firstHeading.replace(/^#+\s*/, '').trim()
-          : `Abschnitt ${chapters.length + 1}`;
+        const title = extractChapterTitle(chapterLines) || `Abschnitt ${chapters.length + 1}`;
         chapters.push({
           id: chapters.length,
           title,
@@ -34,15 +39,9 @@ export function parseChapters(content: string): Chapter[] {
     }
   }
 
-  // Last chapter
   if (currentStart < lines.length) {
     const chapterLines = lines.slice(currentStart);
-    const firstHeading = chapterLines.find(l => l.trim().startsWith('#'));
-    const title = firstHeading
-      ? firstHeading.replace(/^#+\s*/, '').trim()
-      : chapters.length === 0
-        ? 'Gesamter Text'
-        : `Abschnitt ${chapters.length + 1}`;
+    const title = extractChapterTitle(chapterLines) || (chapters.length === 0 ? 'Gesamter Text' : `Abschnitt ${chapters.length + 1}`);
     chapters.push({
       id: chapters.length,
       title,

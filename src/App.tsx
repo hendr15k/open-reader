@@ -143,10 +143,9 @@ export default function App() {
       totalWords: wordCount,
     };
     setCurrentArticle(article);
-    setIsSaved(true);
-    // Save to IndexedDB
     try {
       await addArticle(article);
+      setIsSaved(true);
     } catch (err) {
       console.error('Error saving uploaded file:', err);
     }
@@ -166,9 +165,6 @@ export default function App() {
 
   const handleToggleFavorite = async (id: string, favorite: boolean) => {
     await toggleFavorite(id, favorite);
-    if (currentArticle?.id === id) {
-      setIsSaved(true);
-    }
     reload();
   };
 

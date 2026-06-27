@@ -75,13 +75,11 @@ export default function ArticleView({ article, onClose, onSave, isSaved }: Artic
   const handleIncreaseSpeed = useCallback(() => cycleSpeed(1), [cycleSpeed]);
   const handleDecreaseSpeed = useCallback(() => cycleSpeed(-1), [cycleSpeed]);
 
-  // Get content for current chapter
-  const chapter = chapters[activeChapter];
-  const chapterContent = chapter
+  const chapter = activeChapter >= 0 && activeChapter < chapters.length ? chapters[activeChapter] : undefined;
+  const chapterContent = chapter && chapter.startLine !== undefined
     ? article.content.split('\n').slice(chapter.startLine, chapter.endLine).join('\n')
     : article.content;
 
-  // Restore reading progress on mount
   useEffect(() => {
     const saved = localStorage.getItem(`open-reader-progress-${article.id}`);
     if (saved) {
@@ -90,7 +88,7 @@ export default function ArticleView({ article, onClose, onSave, isSaved }: Artic
         setCurrentSentence(savedIdx);
       }
     }
-  }, []);
+  }, [article.id]);
 
   // Auto-speak the current chapter content when it changes, but only if the
   // user is actively playing. We intentionally do NOT auto-resume on chapter
