@@ -27,14 +27,14 @@
     "pdfjs-dist": "^5.6.205",
     "piper-tts-web": "^1.1.2",
     "react": "^18.3.1",
-    "react-dom": "^18.3.1",
+    "react-dom": "^19.2.7",
     "react-reader": "^2.0.15"
   },
   "devDependencies": {
     "@capacitor/cli": "^6.1.2",
     "@tailwindcss/typography": "^0.5.19",
     "@types/react": "^18.3.1",
-    "@types/react-dom": "^18.3.0",
+    "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^4.0.0",
     "autoprefixer": "^10.4.18",
     "esmock": "^2.7.3",
